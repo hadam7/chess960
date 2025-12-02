@@ -6,4 +6,6 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthenticationStateDeserialization();
 
+builder.Services.AddScoped<ChessGameService>();
+
 await builder.Build().RunAsync();
