@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "css:build": "npx tailwindcss -i ./Styles/app.css -o ./wwwroot/app.css --minify",
-    "css:watch": "npx tailwindcss -i ./Styles/app.css -o ./wwwroot/app.css --watch"
+    "css:build": "npx tailwindcss -i ./Styles/app.css -o ./Chess960.Web/wwwroot/app.css --minify",
+    "css:watch": "npx tailwindcss -i ./Styles/app.css -o ./Chess960.Web/wwwroot/app.css --watch"
   },
   "keywords": [],
   "author": "",
