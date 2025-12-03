@@ -45,14 +45,6 @@
         </div>
     </div>
     
-    <div class="flex gap-2">
-        <button @onclick="() => StartNewGame(false)" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-            Standard Chess
-        </button>
-        <button @onclick="() => StartNewGame(true)" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition">
-            Chess960
-        </button>
-    </div>
 </div>
 
 @code {
@@ -68,11 +60,7 @@
         GameService.OnStateChanged -= StateHasChanged;
     }
 
-    private void StartNewGame(bool is960)
-    {
-        GameService.StartNewGame(is960);
-        selectedSquare = null;
-    }
+
 
     private char GetPieceAt(int file, int rank)
     {

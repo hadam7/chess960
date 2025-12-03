@@ -46,13 +46,41 @@ public static class Chess960Generator
 
         // Convert to FEN string
         // Lowercase for black (rank 8), Uppercase for white (rank 1)
-        // Standard Chess960 FEN: 
-        // [Black Pieces]/pppppppp/8/8/8/8/PPPPPPPP/[White Pieces] w KQkq - 0 1
         
         string whitePieces = new string(board);
         string blackPieces = whitePieces.ToLower();
 
-        return $"{blackPieces}/pppppppp/8/8/8/8/PPPPPPPP/{whitePieces} w KQkq - 0 1";
+        // Calculate Castling Rights (Shredder-FEN)
+        // Use file letters of the rooks (e.g. HAha)
+        var rookIndices = new List<int>();
+        for (int i = 0; i < 8; i++)
+        {
+            if (board[i] == 'R') rookIndices.Add(i);
+        }
+
+        string castlingRights = "";
+        if (rookIndices.Count == 2)
+        {
+            // Rooks are at rookIndices[0] (left/queenside) and rookIndices[1] (right/kingside)
+            // Convention: usually Capital letters for White, Small for Black.
+            // We can just list the file letters.
+            char rook1File = (char)('A' + rookIndices[0]);
+            char rook2File = (char)('A' + rookIndices[1]);
+            
+            // Standard FEN order is usually K then Q (Kingside then Queenside).
+            // But in Shredder-FEN, we just list the files.
+            // Let's list them in file order or specific order? 
+            // Usually it simply lists the available castling files.
+            // Let's put them all: White Rooks, then Black Rooks.
+            
+            castlingRights += $"{rook2File}{rook1File}{char.ToLower(rook2File)}{char.ToLower(rook1File)}";
+        }
+        else
+        {
+            castlingRights = "-";
+        }
+
+        return $"{blackPieces}/pppppppp/8/8/8/8/PPPPPPPP/{whitePieces} w {castlingRights} - 0 1";
     }
 
     private static void PlaceRandomPiece(char[] board, char piece)
