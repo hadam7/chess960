@@ -42,19 +42,31 @@ public class ChessGameService
 
     public bool MakeMove(string fromSquare, string toSquare)
     {
-        // Simple move parsing and validation logic
-        // This is a simplified example. Rudzoft.ChessLib uses Move types.
-        
-        // We need to convert string squares (e.g. "e2") to Square types
-        // and find the matching legal move.
-        
+        // Convert string squares to Square types
+        var from = new Square(fromSquare);
+        var to = new Square(toSquare);
+
+        // Generate all legal moves for the current position
         var moveList = Game.Pos.GenerateMoves();
-        
-        // TODO: Implement robust move finding based on strings
-        // For now, returning false to indicate "not implemented fully"
-        
-        NotifyStateChanged();
-        return false; 
+
+        // Find a move that matches our from/to squares
+        // ExtMove contains the Move object which has the From/To properties
+        var move = moveList.FirstOrDefault(m => m.Move.FromSquare() == from && m.Move.ToSquare() == to);
+
+        // If no simple match, check for promotion (Rudzoft might generate separate moves for each promotion type)
+        if (move.Move.Equals(default(Move)))
+        {
+             move = moveList.FirstOrDefault(m => m.Move.FromSquare() == from && m.Move.ToSquare() == to && m.Move.PromotedPieceType() == PieceTypes.Queen);
+        }
+
+        if (!move.Move.Equals(default(Move)))
+        {
+            Game.Pos.MakeMove(move.Move, Game.Pos.State);
+            NotifyStateChanged();
+            return true;
+        }
+
+        return false;
     }
 
     public string GetFen()
