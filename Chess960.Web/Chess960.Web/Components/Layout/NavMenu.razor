@@ -41,7 +41,7 @@
 
         <AuthorizeView>
             <Authorized>
-                <NavLink class="flex items-center px-3 py-2 rounded hover:bg-stone-700 transition-colors" href="Account/Manage">
+                <NavLink class="flex items-center px-3 py-2 rounded hover:bg-stone-700 transition-colors" href="profile">
                     <span class="bi bi-person-fill mr-3" aria-hidden="true"></span> @context.User.Identity?.Name
                 </NavLink>
                 <form action="Account/Logout" method="post">

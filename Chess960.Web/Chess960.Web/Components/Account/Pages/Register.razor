@@ -29,9 +29,17 @@
             <ValidationSummary class="text-red-500 text-sm font-bold mb-2" role="alert" />
             
             <div>
+                <label for="Input.Username" class="block text-sm font-medium leading-6 text-gray-900">Username</label>
+                <div class="mt-2">
+                    <InputText @bind-Value="Input.Username" id="Input.Username" autocomplete="username" aria-required="true" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" />
+                    <ValidationMessage For="() => Input.Username" class="text-red-500 text-xs mt-1" />
+                </div>
+            </div>
+
+            <div>
                 <label for="Input.Email" class="block text-sm font-medium leading-6 text-gray-900">Email address</label>
                 <div class="mt-2">
-                    <InputText @bind-Value="Input.Email" id="Input.Email" autocomplete="username" aria-required="true" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" />
+                    <InputText @bind-Value="Input.Email" id="Input.Email" autocomplete="email" aria-required="true" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" />
                     <ValidationMessage For="() => Input.Email" class="text-red-500 text-xs mt-1" />
                 </div>
             </div>
@@ -79,7 +87,7 @@
     {
         var user = CreateUser();
 
-        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+        await UserStore.SetUserNameAsync(user, Input.Username, CancellationToken.None);
         var emailStore = GetEmailStore();
         await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
         var result = await UserManager.CreateAsync(user, Input.Password);
@@ -136,6 +144,10 @@
 
     private sealed class InputModel
     {
+        [Required]
+        [Display(Name = "Username")]
+        public string Username { get; set; } = "";
+
         [Required]
         [EmailAddress]
         [Display(Name = "Email")]
