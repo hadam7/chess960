@@ -45,14 +45,24 @@
         </div>
     </div>
     
-    <div class="flex gap-2">
-        <button @onclick="() => StartNewGame(false)" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-            Standard Chess
-        </button>
-        <button @onclick="() => StartNewGame(true)" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition">
-            Chess960
-        </button>
-    </div>
+    @if (!string.IsNullOrEmpty(GameService.GameOverMessage))
+    {
+        <div class="absolute inset-0 flex items-center justify-center bg-black/50 z-10 rounded-lg">
+            <div class="bg-white p-6 rounded-lg shadow-2xl text-center">
+                <h2 class="text-2xl font-bold text-red-600 mb-2">Game Over</h2>
+                <p class="text-xl font-semibold">@GameService.GameOverMessage</p>
+                <button @onclick="() => GameService.StartNewGame(false)" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    New Game
+                </button>
+            </div>
+        </div>
+    }
+    else if (GameService.IsCheck)
+    {
+        <div class="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full font-bold shadow-lg animate-pulse z-10">
+            CHECK!
+        </div>
+    }
 </div>
 
 @code {
@@ -68,11 +78,7 @@
         GameService.OnStateChanged -= StateHasChanged;
     }
 
-    private void StartNewGame(bool is960)
-    {
-        GameService.StartNewGame(is960);
-        selectedSquare = null;
-    }
+
 
     private char GetPieceAt(int file, int rank)
     {
@@ -119,15 +125,33 @@
         }
         else
         {
-            // Move logic placeholder
+            // Move logic
             var from = $"{(char)('a' + selectedSquare.Value.file)}{selectedSquare.Value.rank + 1}";
             var to = $"{(char)('a' + file)}{rank + 1}";
             
             Console.WriteLine($"Attempt move: {from} -> {to}");
             
-            // TODO: Call GameService.MakeMove(from, to)
-            
-            selectedSquare = null;
+            bool success = GameService.MakeMove(from, to);
+            if (success)
+            {
+                selectedSquare = null;
+            }
+            else
+            {
+                // If move failed, maybe they clicked another piece of their own color?
+                // For now, just deselect or select the new piece if it's theirs.
+                // Simple behavior: deselect if invalid move.
+                var piece = GetPieceAt(file, rank);
+                if (piece != ' ')
+                {
+                     // If they clicked another piece, select that instead (if it's same color logic checks out, but let's keep it simple)
+                     selectedSquare = (file, rank);
+                }
+                else
+                {
+                    selectedSquare = null;
+                }
+            }
         }
     }
 }
