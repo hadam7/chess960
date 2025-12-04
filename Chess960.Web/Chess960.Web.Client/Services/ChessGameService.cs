@@ -40,6 +40,11 @@ public class ChessGameService
         NotifyStateChanged();
     }
 
+    public bool IsCheck => Game.Pos.InCheck;
+    public bool IsMate => Game.Pos.IsMate;
+    public bool IsStalemate => !IsCheck && !Game.Pos.GenerateMoves().Any();
+    public string GameOverMessage { get; private set; } = "";
+
     public bool MakeMove(string fromSquare, string toSquare)
     {
         // Convert string squares to Square types
@@ -62,11 +67,30 @@ public class ChessGameService
         if (!move.Move.Equals(default(Move)))
         {
             Game.Pos.MakeMove(move.Move, Game.Pos.State);
+            UpdateGameState();
             NotifyStateChanged();
             return true;
         }
 
         return false;
+    }
+
+    private void UpdateGameState()
+    {
+        GameOverMessage = "";
+        if (IsMate)
+        {
+            var winner = Game.Pos.SideToMove.IsWhite ? "Black" : "White";
+            GameOverMessage = $"Checkmate! {winner} wins.";
+        }
+        else if (IsStalemate)
+        {
+            GameOverMessage = "Stalemate! Draw.";
+        }
+        else if (IsCheck)
+        {
+             // Just check, game continues
+        }
     }
 
     public string GetFen()

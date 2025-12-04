@@ -1,0 +1,113 @@
+@page "/profile"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Chess960.Web.Data
+@attribute [Authorize]
+
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Profile - Chess960</PageTitle>
+
+<div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+    @if (user == null)
+    {
+        <div class="flex justify-center items-center h-64">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        </div>
+    }
+    else
+    {
+        <!-- Header Section -->
+        <div class="glass-panel p-8 mb-8 animate-soft-up">
+            <div class="flex items-center gap-8">
+                <div class="w-28 h-28 rounded-full bg-gradient-to-br from-theme-accent to-theme-glow flex items-center justify-center text-5xl font-bold text-black shadow-[0_0_40px_rgba(var(--color-accent),0.4)]">
+                    @user.UserName?.Substring(0, 1).ToUpper()
+                </div>
+                <div>
+                    <h1 class="text-5xl font-display font-bold text-white mb-2 tracking-tight">@user.UserName</h1>
+                    <div class="flex items-center gap-2 text-theme-muted font-medium text-lg">
+                        <span class="bi bi-envelope text-theme-accent"></span> @user.Email
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-soft-up animate-delay-100">
+            <!-- Elo Rating Card -->
+            <div class="glass-panel p-6 group hover:bg-white/10 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold text-theme-muted uppercase tracking-widest group-hover:text-white transition-colors">Elo Rating</p>
+                        <p class="text-5xl font-display font-bold text-white mt-2 group-hover:text-glow transition-all">@user.EloRating</p>
+                    </div>
+                    <div class="text-white/20 group-hover:text-theme-accent transition-colors">
+                        <span class="bi bi-trophy-fill text-5xl"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Games Played Card -->
+            <div class="glass-panel p-6 group hover:bg-white/10 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold text-theme-muted uppercase tracking-widest group-hover:text-white transition-colors">Games Played</p>
+                        <p class="text-5xl font-display font-bold text-white mt-2">@user.GamesPlayed</p>
+                    </div>
+                    <div class="text-white/20 group-hover:text-theme-accent transition-colors">
+                        <span class="bi bi-controller text-5xl"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Win Rate Card -->
+            <div class="glass-panel p-6 group hover:bg-white/10 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-bold text-theme-muted uppercase tracking-widest group-hover:text-white transition-colors">Win Rate</p>
+                        <p class="text-5xl font-display font-bold text-white mt-2">@GetWinRate()%</p>
+                    </div>
+                    <div class="text-white/20 group-hover:text-theme-accent transition-colors">
+                        <span class="bi bi-graph-up-arrow text-5xl"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity / History Placeholder -->
+        <div class="glass-panel p-8 animate-soft-up animate-delay-200">
+            <h2 class="text-2xl font-display font-bold text-white mb-6 border-b border-white/10 pb-4">Recent Activity</h2>
+            <div class="text-center py-16">
+                <div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 text-white/30 border border-white/10">
+                    <span class="bi bi-clock-history text-4xl"></span>
+                </div>
+                <p class="text-theme-muted mb-8 font-medium text-lg">No recent games found.</p>
+                <a href="play-bot" class="btn-pill inline-block">
+                    Start a Game
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private ApplicationUser? user;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var principal = authState.User;
+
+        if (principal.Identity?.IsAuthenticated == true)
+        {
+            user = await UserManager.GetUserAsync(principal);
+        }
+    }
+
+    private int GetWinRate()
+    {
+        if (user == null || user.GamesPlayed == 0) return 0;
+        return (int)((double)user.GamesWon / user.GamesPlayed * 100);
+    }
+}
