@@ -2,68 +2,63 @@
 
 @inject NavigationManager NavigationManager
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Chess960.Web</a>
+<div class="bg-stone-900 text-white p-4 flex items-center justify-between md:flex-col md:items-start md:h-full md:w-64 md:fixed md:top-0 md:left-0">
+    <div class="font-bold text-xl tracking-tight">
+        <a class="hover:text-stone-300 transition-colors" href="">Chess960.Web</a>
     </div>
+    
+    <button class="md:hidden p-2 rounded hover:bg-stone-800 focus:outline-none" onclick="document.getElementById('nav-menu').classList.toggle('hidden')">
+        <span class="bi bi-list text-2xl"></span>
+    </button>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<div id="nav-menu" class="hidden md:block md:ml-64 p-4 bg-stone-100 min-h-screen">
+    <!-- This div is actually the sidebar content in the original template, but here we are redefining the layout. 
+         Wait, NavMenu is usually the sidebar itself. Let's stick to making this the sidebar. -->
+</div>
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
+<!-- Correct Tailwind Sidebar Implementation -->
+<div class="md:hidden bg-stone-900 text-white p-4 flex justify-between items-center">
+    <a class="font-bold text-xl" href="">Chess960</a>
+    <button onclick="document.querySelector('.mobile-nav').classList.toggle('hidden')" class="p-1 border rounded border-stone-700">
+        <span class="bi bi-list"></span>
+    </button>
+</div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
+<div class="mobile-nav hidden md:block bg-stone-800 text-white h-full min-h-screen w-64 fixed top-0 left-0 overflow-y-auto">
+    <div class="p-4 border-b border-stone-700 mb-4">
+        <a class="text-xl font-bold" href="">Chess960.Web</a>
+    </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
+    <nav class="flex flex-col space-y-1 px-2">
+        <NavLink class="flex items-center px-3 py-2 rounded hover:bg-stone-700 transition-colors" href="" Match="NavLinkMatch.All">
+            <span class="bi bi-house-door-fill mr-3" aria-hidden="true"></span> Home
+        </NavLink>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="auth">
-                <span class="bi bi-lock-nav-menu" aria-hidden="true"></span> Auth Required
-            </NavLink>
-        </div>
+        <NavLink class="flex items-center px-3 py-2 rounded hover:bg-stone-700 transition-colors" href="auth">
+            <span class="bi bi-lock-fill mr-3" aria-hidden="true"></span> Auth Required
+        </NavLink>
 
         <AuthorizeView>
             <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Manage">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <form action="Account/Logout" method="post">
-                        <AntiforgeryToken />
-                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                        <button type="submit" class="nav-link">
-                            <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
-                        </button>
-                    </form>
-                </div>
+                <NavLink class="flex items-center px-3 py-2 rounded hover:bg-stone-700 transition-colors" href="Account/Manage">
+                    <span class="bi bi-person-fill mr-3" aria-hidden="true"></span> @context.User.Identity?.Name
+                </NavLink>
+                <form action="Account/Logout" method="post">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                    <button type="submit" class="w-full flex items-center px-3 py-2 rounded hover:bg-stone-700 transition-colors text-left">
+                        <span class="bi bi-box-arrow-left mr-3" aria-hidden="true"></span> Logout
+                    </button>
+                </form>
             </Authorized>
             <NotAuthorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Register">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
-                    </NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Account/Login">
-                        <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
-                    </NavLink>
-                </div>
+                <NavLink class="flex items-center px-3 py-2 rounded hover:bg-stone-700 transition-colors" href="Account/Register">
+                    <span class="bi bi-person-plus-fill mr-3" aria-hidden="true"></span> Register
+                </NavLink>
+                <NavLink class="flex items-center px-3 py-2 rounded hover:bg-stone-700 transition-colors" href="Account/Login">
+                    <span class="bi bi-box-arrow-in-right mr-3" aria-hidden="true"></span> Login
+                </NavLink>
             </NotAuthorized>
         </AuthorizeView>
     </nav>
