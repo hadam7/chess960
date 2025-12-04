@@ -1,0 +1,142 @@
+@page "/play-bot"
+@using Chess960.Web.Client.Services
+@using Chess960.Web.Components
+@using Chess960.Web.Client.Components
+@inject ChessGameService GameService
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+@rendermode InteractiveServer
+
+<PageTitle>Play vs Bot - Chess960</PageTitle>
+
+<div class="min-h-screen bg-chess-dark-950 text-white py-8 px-4">
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Column: Game Info & Controls -->
+        <div class="lg:col-span-1 space-y-6">
+            <div class="bg-chess-dark-900 p-6 rounded-xl shadow-2xl border border-chess-purple-800">
+                <h2 class="text-2xl font-bold mb-4 text-chess-purple-400">Game Settings</h2>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Bot Difficulty (0-20)</label>
+                    <input type="range" min="0" max="20" @bind="skillLevel" @bind:event="oninput" 
+                           class="w-full h-2 bg-chess-purple-900 rounded-lg appearance-none cursor-pointer accent-chess-purple-500">
+                    <div class="text-right text-chess-purple-300 mt-1">Level: @skillLevel</div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button @onclick="StartNewGame" 
+                            class="flex-1 bg-chess-purple-600 hover:bg-chess-purple-500 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-lg shadow-chess-purple-900/50">
+                        New Game
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-chess-dark-900 p-6 rounded-xl shadow-2xl border border-chess-purple-800">
+                <h2 class="text-xl font-bold mb-4 text-chess-purple-400">Status</h2>
+                @if (isBotThinking)
+                {
+                    <div class="flex items-center gap-3 text-yellow-400 animate-pulse">
+                        <span class="bi bi-cpu text-xl"></span>
+                        <span>Bot is thinking...</span>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(GameService.GameOverMessage))
+                {
+                    <div class="text-red-400 font-bold">
+                        @GameService.GameOverMessage
+                    </div>
+                }
+                else
+                {
+                    <div class="text-green-400">
+                        Your turn
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Center/Right: Chess Board -->
+        <div class="lg:col-span-2 flex justify-center">
+            <div class="relative">
+                <ChessBoard />
+                @if (isBotThinking)
+                {
+                    <!-- Transparent overlay to prevent clicks while bot thinks -->
+                    <div class="absolute inset-0 z-20 cursor-wait"></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int skillLevel = 5;
+    private bool isBotThinking = false;
+    private DotNetObjectReference<PlayVsBot>? dotNetHelper;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotNetHelper = DotNetObjectReference.Create(this);
+            // Load the script globally
+            await JSRuntime.InvokeVoidAsync("import", "/js/stockfish-interop.js");
+            await JSRuntime.InvokeVoidAsync("stockfishInterop.init", dotNetHelper);
+            
+            GameService.OnStateChanged += OnGameStateChanged;
+            StartNewGame();
+        }
+    }
+
+    private void StartNewGame()
+    {
+        GameService.StartNewGame();
+        // Reset bot
+        JSRuntime.InvokeVoidAsync("stockfishInterop.startNewGame", skillLevel);
+        isBotThinking = false;
+    }
+
+    private void OnGameStateChanged()
+    {
+        // Check if it's Black's turn (Bot)
+        if (!GameService.Game.Pos.SideToMove.IsWhite && !GameService.IsMate && !GameService.IsStalemate)
+        {
+            isBotThinking = true;
+            StateHasChanged();
+            
+            // Small delay to let UI update
+            Task.Delay(500).ContinueWith(async _ =>
+            {
+                var fen = GameService.GetFen();
+                // Depth depends on skill level roughly, or fixed. Let's use 10 for now or scale it.
+                int depth = Math.Max(1, skillLevel / 2 + 5); 
+                await JSRuntime.InvokeVoidAsync("stockfishInterop.requestMove", fen, depth);
+            });
+        }
+    }
+
+    [JSInvokable]
+    public void OnBestMove(string moveString)
+    {
+        // moveString is like "e2e4" or "e7e8q"
+        if (string.IsNullOrEmpty(moveString)) return;
+
+        var from = moveString.Substring(0, 2);
+        var to = moveString.Substring(2, 2);
+        
+        GameService.MakeMove(from, to);
+        isBotThinking = false;
+        StateHasChanged();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        GameService.OnStateChanged -= OnGameStateChanged;
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+        }
+        return ValueTask.CompletedTask;
+    }
+}
