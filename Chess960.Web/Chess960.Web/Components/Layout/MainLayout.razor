@@ -1,16 +1,17 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<div class="min-h-screen flex flex-col md:flex-row">
+    <!-- Sidebar (NavMenu handles its own responsive visibility) -->
+    <NavMenu />
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+    <!-- Main Content Area -->
+    <main class="flex-1 md:ml-64 p-4 bg-stone-50 min-h-screen">
+        <!-- Top Row (Optional, maybe for user profile or extra links) -->
+        <div class="flex justify-end mb-4">
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank" class="text-blue-600 hover:underline">About</a>
         </div>
 
-        <article class="content px-4">
+        <article class="prose max-w-none">
             @Body
         </article>
     </main>
