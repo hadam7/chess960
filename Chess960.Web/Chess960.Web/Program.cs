@@ -49,6 +49,10 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddScoped<Chess960.Web.Client.Services.ChessGameService>();
 
+// Multiplayer Services
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<Chess960.Web.Services.GameManager>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -77,5 +81,6 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
+app.MapHub<Chess960.Web.Hubs.GameHub>("/gamehub");
 
 app.Run();
