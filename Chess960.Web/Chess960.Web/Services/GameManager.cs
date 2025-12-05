@@ -8,24 +8,59 @@ namespace Chess960.Web.Services;
 public class GameManager
 {
     private readonly ConcurrentDictionary<string, GameSession> _games = new();
+    private readonly ConcurrentQueue<string> _waitingPlayers = new();
 
-    public GameSession CreateGame(string hostConnectionId, string? fen = null)
+    public GameSession? FindMatch(string playerConnectionId)
+    {
+        if (_waitingPlayers.TryDequeue(out var opponentId))
+        {
+            // Prevent matching with self if clicked twice quickly
+            if (opponentId == playerConnectionId)
+            {
+                _waitingPlayers.Enqueue(playerConnectionId);
+                return null;
+            }
+            
+            return CreateGame(opponentId, playerConnectionId);
+        }
+        
+        _waitingPlayers.Enqueue(playerConnectionId);
+        return null;
+    }
+
+    public GameSession CreateGame(string whitePlayerId, string blackPlayerId)
+    {
+        var gameId = GenerateGameId();
+        var game = GameFactory.Create();
+        game.NewGame();
+
+        var session = new GameSession
+        {
+            GameId = gameId,
+            HostConnectionId = whitePlayerId, // Host is White for now
+            Game = game,
+            WhitePlayerId = whitePlayerId,
+            BlackPlayerId = blackPlayerId
+        };
+
+        _games.TryAdd(gameId, session);
+        return session;
+    }
+
+    // Kept for manual creation if needed later, but refactored to use common logic could be better
+    public GameSession CreateHostedGame(string hostConnectionId, string? fen = null)
     {
         var gameId = GenerateGameId();
         var game = GameFactory.Create(fen ?? GameFactory.Create().Pos.FenNotation);
         
-        // If no FEN provided, it's a standard game. For 960, the caller should provide the FEN.
-        if (fen == null)
-        {
-            game.NewGame();
-        }
+        if (fen == null) game.NewGame();
 
         var session = new GameSession
         {
             GameId = gameId,
             HostConnectionId = hostConnectionId,
             Game = game,
-            WhitePlayerId = hostConnectionId // Host plays White by default for now
+            WhitePlayerId = hostConnectionId
         };
 
         _games.TryAdd(gameId, session);

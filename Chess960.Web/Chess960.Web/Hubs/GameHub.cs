@@ -12,11 +12,23 @@ public class GameHub : Hub
         _gameManager = gameManager;
     }
 
-    public async Task<string> CreateGame(string? fen = null)
+    public async Task FindMatch()
     {
-        var session = _gameManager.CreateGame(Context.ConnectionId, fen);
-        await Groups.AddToGroupAsync(Context.ConnectionId, session.GameId);
-        return session.GameId;
+        var session = _gameManager.FindMatch(Context.ConnectionId);
+        if (session != null)
+        {
+            // Match found!
+            await Groups.AddToGroupAsync(session.WhitePlayerId, session.GameId);
+            await Groups.AddToGroupAsync(session.BlackPlayerId!, session.GameId);
+            
+            // Notify both players
+            await Clients.Group(session.GameId).SendAsync("GameStarted", session.Game.Pos.FenNotation, session.WhitePlayerId, session.BlackPlayerId);
+        }
+        else
+        {
+            // Added to queue
+            await Clients.Caller.SendAsync("WaitingForMatch");
+        }
     }
 
     public async Task<bool> JoinGame(string gameId)
