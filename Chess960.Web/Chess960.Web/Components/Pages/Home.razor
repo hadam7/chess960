@@ -3,8 +3,58 @@
 
 <PageTitle>Chess960</PageTitle>
 
-<div class="flex flex-col items-center justify-center min-h-screen bg-stone-100 p-4">
-    <h1 class="text-4xl font-bold mb-8 text-stone-800">Chess960 Blazor</h1>
-    <GameControls @rendermode="InteractiveAuto" />
-    <ChessBoard @rendermode="InteractiveAuto" />
+<div class="flex flex-col items-center justify-center min-h-[70vh] text-center space-y-16 py-8">
+    
+    <!-- Hero Section -->
+    <div class="space-y-8 max-w-5xl animate-soft-up">
+        <div class="inline-block px-6 py-2 rounded-full bg-white/5 border border-white/10 text-theme-accent text-sm font-bold tracking-widest uppercase mb-4 backdrop-blur-md">
+            <span class="bi bi-stars mr-2"></span>Reimagine Chess
+        </div>
+        <h1 class="text-7xl md:text-9xl font-display font-bold tracking-tight text-white drop-shadow-2xl">
+            CHESS<span class="text-transparent bg-clip-text bg-gradient-to-r from-theme-accent to-theme-glow">960</span>
+        </h1>
+        <p class="text-2xl text-theme-text font-light max-w-2xl mx-auto leading-relaxed opacity-90">
+            A pure test of strategy in a <span class="text-theme-accent font-medium">beautifully chaotic</span> world.
+        </p>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex flex-col sm:flex-row gap-6 w-full max-w-xl animate-soft-up animate-delay-100">
+        <a href="play-bot" class="btn-pill flex-1 flex items-center justify-center gap-4 text-xl group">
+            <span class="bi bi-play-fill text-3xl group-hover:scale-125 transition-transform"></span>
+            <span>Play Now</span>
+        </a>
+
+        <button class="btn-glass flex-1 flex items-center justify-center gap-4 text-xl cursor-not-allowed opacity-60">
+            <span class="bi bi-globe text-2xl"></span>
+            <span>Multiplayer</span>
+        </button>
+    </div>
+
+    <!-- Features Grid (Floating Glass) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl mt-16">
+        <div class="glass-panel p-8 animate-float-slow hover:bg-white/10 transition-colors">
+            <div class="w-16 h-16 bg-theme-accent/20 rounded-full flex items-center justify-center text-theme-accent text-3xl mb-6 mx-auto shadow-[0_0_20px_rgba(var(--color-accent),0.2)]">
+                <span class="bi bi-shuffle"></span>
+            </div>
+            <h3 class="text-2xl font-display text-white mb-3">960 Variations</h3>
+            <p class="text-theme-text text-sm leading-relaxed opacity-80">Every game is a new landscape. No memorization, just pure intuition.</p>
+        </div>
+
+        <div class="glass-panel p-8 animate-float-slow hover:bg-white/10 transition-colors" style="animation-delay: 1.5s;">
+            <div class="w-16 h-16 bg-theme-glow/20 rounded-full flex items-center justify-center text-theme-glow text-3xl mb-6 mx-auto shadow-[0_0_20px_rgba(var(--color-glow),0.2)]">
+                <span class="bi bi-lightning-charge-fill"></span>
+            </div>
+            <h3 class="text-2xl font-display text-white mb-3">Instant Play</h3>
+            <p class="text-theme-text text-sm leading-relaxed opacity-80">Powered by WASM. Zero latency, running directly in your browser.</p>
+        </div>
+
+        <div class="glass-panel p-8 animate-float-slow hover:bg-white/10 transition-colors" style="animation-delay: 3s;">
+            <div class="w-16 h-16 bg-theme-accent/20 rounded-full flex items-center justify-center text-theme-accent text-3xl mb-6 mx-auto shadow-[0_0_20px_rgba(var(--color-accent),0.2)]">
+                <span class="bi bi-trophy-fill"></span>
+            </div>
+            <h3 class="text-2xl font-display text-white mb-3">Mastery</h3>
+            <p class="text-theme-text text-sm leading-relaxed opacity-80">Climb the ranks in an environment designed for focus and clarity.</p>
+        </div>
+    </div>
 </div>

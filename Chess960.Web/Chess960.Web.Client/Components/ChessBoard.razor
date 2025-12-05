@@ -3,7 +3,7 @@
 @implements IDisposable
 
 <div class="flex flex-col items-center gap-4">
-    <div class="w-full max-w-[600px] aspect-square bg-[#ebecd0] rounded-lg shadow-xl overflow-hidden border-4 border-[#779556]">
+    <div class="w-full max-w-[600px] aspect-square bg-white/5 rounded-[2rem] shadow-2xl overflow-hidden border-8 border-white/10 relative backdrop-blur-sm">
         <div class="grid grid-cols-8 grid-rows-8 h-full w-full">
             @for (int rank = 7; rank >= 0; rank--)
             {
@@ -12,7 +12,7 @@
                     var localRank = rank;
                     var localFile = file;
                     var isLightSquare = (localRank + localFile) % 2 != 0;
-                    var squareColor = isLightSquare ? "bg-[#ebecd0]" : "bg-[#779556]";
+                    var squareColor = isLightSquare ? "bg-board-white" : "bg-board-black";
                     var piece = GetPieceAt(localFile, localRank);
                     var isSelected = selectedSquare == (localFile, localRank);
                     
@@ -22,13 +22,13 @@
                         @* Coordinate labels *@
                         @if (file == 0)
                         {
-                            <span class="absolute top-0.5 left-0.5 text-[10px] font-bold @(isLightSquare ? "text-[#779556]" : "text-[#ebecd0]")">
+                            <span class="absolute top-0.5 left-0.5 text-[10px] font-bold @(isLightSquare ? "text-board-black" : "text-board-white")">
                                 @(rank + 1)
                             </span>
                         }
                         @if (rank == 0)
                         {
-                            <span class="absolute bottom-0.5 right-0.5 text-[10px] font-bold @(isLightSquare ? "text-[#779556]" : "text-[#ebecd0]")">
+                            <span class="absolute bottom-0.5 right-0.5 text-[10px] font-bold @(isLightSquare ? "text-board-black" : "text-board-white")">
                                 @((char)('a' + file))
                             </span>
                         }

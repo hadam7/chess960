@@ -19,72 +19,73 @@
     else
     {
         <!-- Header Section -->
-        <div class="bg-white shadow-xl rounded-2xl overflow-hidden mb-8 transform transition-all hover:scale-[1.01] duration-300">
-            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 h-32"></div>
-            <div class="px-6 pb-6 relative">
-                <div class="flex items-end -mt-12 mb-4">
-                    <div class="h-24 w-24 rounded-full border-4 border-white bg-stone-800 flex items-center justify-center text-3xl font-bold text-white shadow-lg">
-                        @user.UserName?.Substring(0, 1).ToUpper()
-                    </div>
-                    <div class="ml-4 mb-1">
-                        <h1 class="text-3xl font-bold text-gray-900">@user.UserName</h1>
-                        <p class="text-sm text-gray-500">@user.Email</p>
+        <div class="glass-panel p-8 mb-8 animate-soft-up">
+            <div class="flex items-center gap-8">
+                <div class="w-28 h-28 rounded-full bg-gradient-to-br from-theme-accent to-theme-glow flex items-center justify-center text-5xl font-bold text-black shadow-[0_0_40px_rgba(var(--color-accent),0.4)]">
+                    @user.UserName?.Substring(0, 1).ToUpper()
+                </div>
+                <div>
+                    <h1 class="text-5xl font-display font-bold text-white mb-2 tracking-tight">@user.UserName</h1>
+                    <div class="flex items-center gap-2 text-theme-muted font-medium text-lg">
+                        <span class="bi bi-envelope text-theme-accent"></span> @user.Email
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-soft-up animate-delay-100">
             <!-- Elo Rating Card -->
-            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-400 hover:shadow-lg transition-shadow">
+            <div class="glass-panel p-6 group hover:bg-white/10 transition-colors">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Elo Rating</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-1">@user.EloRating</p>
+                        <p class="text-xs font-bold text-theme-muted uppercase tracking-widest group-hover:text-white transition-colors">Elo Rating</p>
+                        <p class="text-5xl font-display font-bold text-white mt-2 group-hover:text-glow transition-all">@user.EloRating</p>
                     </div>
-                    <div class="p-3 bg-yellow-100 rounded-full text-yellow-600">
-                        <span class="bi bi-trophy-fill text-xl"></span>
+                    <div class="text-white/20 group-hover:text-theme-accent transition-colors">
+                        <span class="bi bi-trophy-fill text-5xl"></span>
                     </div>
                 </div>
             </div>
 
             <!-- Games Played Card -->
-            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
+            <div class="glass-panel p-6 group hover:bg-white/10 transition-colors">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Games Played</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-1">@user.GamesPlayed</p>
+                        <p class="text-xs font-bold text-theme-muted uppercase tracking-widest group-hover:text-white transition-colors">Games Played</p>
+                        <p class="text-5xl font-display font-bold text-white mt-2">@user.GamesPlayed</p>
                     </div>
-                    <div class="p-3 bg-blue-100 rounded-full text-blue-600">
-                        <span class="bi bi-controller text-xl"></span>
+                    <div class="text-white/20 group-hover:text-theme-accent transition-colors">
+                        <span class="bi bi-controller text-5xl"></span>
                     </div>
                 </div>
             </div>
 
             <!-- Win Rate Card -->
-            <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-500 hover:shadow-lg transition-shadow">
+            <div class="glass-panel p-6 group hover:bg-white/10 transition-colors">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Win Rate</p>
-                        <p class="text-3xl font-bold text-gray-900 mt-1">@GetWinRate()%</p>
+                        <p class="text-xs font-bold text-theme-muted uppercase tracking-widest group-hover:text-white transition-colors">Win Rate</p>
+                        <p class="text-5xl font-display font-bold text-white mt-2">@GetWinRate()%</p>
                     </div>
-                    <div class="p-3 bg-green-100 rounded-full text-green-600">
-                        <span class="bi bi-graph-up-arrow text-xl"></span>
+                    <div class="text-white/20 group-hover:text-theme-accent transition-colors">
+                        <span class="bi bi-graph-up-arrow text-5xl"></span>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Recent Activity / History Placeholder -->
-        <div class="bg-white shadow-md rounded-xl p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Recent Activity</h2>
-            <div class="text-center py-8 text-gray-500">
-                <span class="bi bi-clock-history text-4xl mb-2 block opacity-50"></span>
-                <p>No recent games found.</p>
-                <button class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors" onclick="window.location.href='/'">
-                    Play a Game
-                </button>
+        <div class="glass-panel p-8 animate-soft-up animate-delay-200">
+            <h2 class="text-2xl font-display font-bold text-white mb-6 border-b border-white/10 pb-4">Recent Activity</h2>
+            <div class="text-center py-16">
+                <div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 text-white/30 border border-white/10">
+                    <span class="bi bi-clock-history text-4xl"></span>
+                </div>
+                <p class="text-theme-muted mb-8 font-medium text-lg">No recent games found.</p>
+                <a href="play-bot" class="btn-pill inline-block">
+                    Start a Game
+                </a>
             </div>
         </div>
     }

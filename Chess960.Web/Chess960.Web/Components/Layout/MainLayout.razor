@@ -1,17 +1,24 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="min-h-screen flex flex-col md:flex-row">
-    <!-- Sidebar (NavMenu handles its own responsive visibility) -->
+<div class="min-h-screen flex flex-col md:flex-row relative overflow-hidden">
+    
+    <!-- Organic Background Elements -->
+    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-theme-accent/20 rounded-full blur-[100px] pointer-events-none animate-float-slow"></div>
+    <div class="absolute bottom-[10%] right-[-5%] w-[30%] h-[30%] bg-theme-glow/10 rounded-full blur-[80px] pointer-events-none animate-float-slow" style="animation-delay: 2s;"></div>
+
+    <!-- Sidebar -->
     <NavMenu />
 
     <!-- Main Content Area -->
-    <main class="flex-1 md:ml-64 p-4 bg-stone-50 min-h-screen">
-        <!-- Top Row (Optional, maybe for user profile or extra links) -->
-        <div class="flex justify-end mb-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank" class="text-blue-600 hover:underline">About</a>
+    <main class="flex-1 md:ml-24 lg:ml-64 p-4 md:p-8 transition-all duration-300 relative z-10">
+        <!-- Top Bar (Hidden on Desktop) -->
+        <div class="md:hidden flex justify-between items-center mb-6">
+            <div class="flex items-center gap-3">
+                <span class="text-xl font-display font-bold text-white tracking-wider">CHESS<span class="text-theme-accent">960</span></span>
+            </div>
         </div>
 
-        <article class="prose max-w-none">
+        <article class="animate-soft-up">
             @Body
         </article>
     </main>

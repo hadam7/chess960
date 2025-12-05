@@ -1,0 +1,154 @@
+@page "/play-bot"
+@using Chess960.Web.Client.Services
+@using Chess960.Web.Components
+@using Chess960.Web.Client.Components
+@inject ChessGameService GameService
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+@rendermode InteractiveServer
+
+<PageTitle>Play vs Bot - Chess960</PageTitle>
+
+<div class="min-h-screen py-4 px-4">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Column: Game Info & Controls -->
+        <div class="lg:col-span-1 space-y-6 animate-soft-up">
+            <div class="glass-panel p-8">
+                <h2 class="text-2xl font-display font-bold mb-6 text-white flex items-center gap-2">
+                    <span class="bi bi-sliders text-theme-accent"></span> Configuration
+                </h2>
+                
+                <div class="mb-8">
+                    <label class="block text-xs font-bold text-theme-muted mb-4 uppercase tracking-wider">Engine Strength</label>
+                    <div class="relative">
+                        <input type="range" min="0" max="20" @bind="skillLevel" @bind:event="oninput" 
+                               class="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-theme-accent">
+                    </div>
+                    <div class="flex justify-between items-center mt-3">
+                        <span class="text-xs text-white/50 font-bold">BEGINNER</span>
+                        <div class="px-4 py-1 bg-theme-accent/20 text-theme-accent rounded-full font-bold text-sm border border-theme-accent/30 shadow-[0_0_10px_rgba(var(--color-accent),0.2)]">Level @skillLevel</div>
+                        <span class="text-xs text-white/50 font-bold">MASTER</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button @onclick="StartNewGame" 
+                            class="btn-pill w-full text-lg">
+                        Start Game
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-panel p-6">
+                <h2 class="text-xl font-display font-bold mb-4 text-white">Status</h2>
+                @if (isBotThinking)
+                {
+                    <div class="flex items-center gap-3 text-white">
+                        <div class="relative">
+                            <div class="w-3 h-3 bg-theme-accent rounded-full animate-ping absolute opacity-75"></div>
+                            <div class="w-3 h-3 bg-theme-accent rounded-full relative"></div>
+                        </div>
+                        <span class="font-bold text-theme-accent text-glow">Thinking...</span>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(GameService.GameOverMessage))
+                {
+                    <div class="text-white font-bold text-lg p-4 bg-red-500/10 border border-red-500/30 rounded-2xl backdrop-blur-md">
+                        @GameService.GameOverMessage
+                    </div>
+                }
+                else
+                {
+                    <div class="flex items-center gap-3 text-theme-accent">
+                        <div class="w-3 h-3 bg-theme-accent rounded-full animate-pulse"></div>
+                        <span class="font-bold">Your Turn</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Center/Right: Chess Board -->
+        <div class="lg:col-span-2 flex justify-center items-start animate-soft-up animate-delay-100">
+            <div class="relative">
+                <ChessBoard />
+                @if (isBotThinking)
+                {
+                    <!-- Transparent overlay -->
+                    <div class="absolute inset-0 z-20 cursor-wait"></div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int skillLevel = 5;
+    private bool isBotThinking = false;
+    private DotNetObjectReference<PlayVsBot>? dotNetHelper;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            dotNetHelper = DotNetObjectReference.Create(this);
+            // Load the script globally
+            await JSRuntime.InvokeVoidAsync("import", "/js/stockfish-interop.js");
+            await JSRuntime.InvokeVoidAsync("stockfishInterop.init", dotNetHelper);
+            
+            GameService.OnStateChanged += OnGameStateChanged;
+            StartNewGame();
+        }
+    }
+
+    private void StartNewGame()
+    {
+        GameService.StartNewGame(true);
+        // Reset bot
+        JSRuntime.InvokeVoidAsync("stockfishInterop.startNewGame", skillLevel);
+        isBotThinking = false;
+    }
+
+    private void OnGameStateChanged()
+    {
+        // Check if it's Black's turn (Bot)
+        if (!GameService.Game.Pos.SideToMove.IsWhite && !GameService.IsMate && !GameService.IsStalemate)
+        {
+            isBotThinking = true;
+            StateHasChanged();
+            
+            // Small delay to let UI update
+            Task.Delay(500).ContinueWith(async _ =>
+            {
+                var fen = GameService.GetFen();
+                // Depth depends on skill level roughly, or fixed. Let's use 10 for now or scale it.
+                int depth = Math.Max(1, skillLevel / 2 + 5); 
+                await JSRuntime.InvokeVoidAsync("stockfishInterop.requestMove", fen, depth);
+            });
+        }
+    }
+
+    [JSInvokable]
+    public void OnBestMove(string moveString)
+    {
+        // moveString is like "e2e4" or "e7e8q"
+        if (string.IsNullOrEmpty(moveString)) return;
+
+        var from = moveString.Substring(0, 2);
+        var to = moveString.Substring(2, 2);
+        
+        GameService.MakeMove(from, to);
+        isBotThinking = false;
+        StateHasChanged();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        GameService.OnStateChanged -= OnGameStateChanged;
+        if (dotNetHelper != null)
+        {
+            dotNetHelper.Dispose();
+        }
+        return ValueTask.CompletedTask;
+    }
+}

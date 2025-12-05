@@ -1,0 +1,97 @@
+@page "/settings"
+@rendermode InteractiveServer
+@inject IJSRuntime JSRuntime
+
+<div class="max-w-4xl mx-auto animate-soft-up">
+    <div class="glass-panel p-8 mb-8">
+        <h1 class="text-4xl font-display font-bold text-white mb-2">Settings</h1>
+        <p class="text-theme-muted text-lg">Customize your Chess960 experience.</p>
+    </div>
+
+    <div class="glass-panel p-8">
+        <h2 class="text-2xl font-display font-bold text-white mb-6 flex items-center gap-3">
+            <span class="bi bi-palette-fill text-theme-accent"></span> Appearance
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Neon Green (Default) -->
+            <button @onclick="@(() => SetTheme("green"))" class="group relative p-6 rounded-2xl border border-white/10 bg-black/40 hover:bg-white/5 transition-all duration-300 text-left">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="font-bold text-white text-lg">Neon Green</span>
+                    @if (currentTheme == "green")
+                    {
+                        <span class="bi bi-check-circle-fill text-[#00ff9d] text-xl"></span>
+                    }
+                </div>
+                <div class="h-24 rounded-xl bg-gradient-to-br from-[#050505] to-[#111827] relative overflow-hidden border border-white/5">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,255,157,0.2),transparent)]"></div>
+                    <div class="absolute bottom-4 right-4 px-4 py-1 bg-[#00ff9d] text-black text-xs font-bold rounded-full shadow-[0_0_15px_rgba(0,255,157,0.4)]">Active</div>
+                </div>
+            </button>
+
+            <!-- Royal Gold -->
+            <button @onclick="@(() => SetTheme("gold"))" class="group relative p-6 rounded-2xl border border-white/10 bg-black/40 hover:bg-white/5 transition-all duration-300 text-left">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="font-bold text-white text-lg">Royal Gold</span>
+                    @if (currentTheme == "gold")
+                    {
+                        <span class="bi bi-check-circle-fill text-[#fbbf24] text-xl"></span>
+                    }
+                </div>
+                <div class="h-24 rounded-xl bg-gradient-to-br from-[#080808] to-[#1c1917] relative overflow-hidden border border-white/5">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,0.2),transparent)]"></div>
+                    <div class="absolute bottom-4 right-4 px-4 py-1 bg-[#fbbf24] text-black text-xs font-bold rounded-full shadow-[0_0_15px_rgba(251,191,36,0.4)]">Select</div>
+                </div>
+            </button>
+
+            <!-- Electric Blue -->
+            <button @onclick="@(() => SetTheme("blue"))" class="group relative p-6 rounded-2xl border border-white/10 bg-black/40 hover:bg-white/5 transition-all duration-300 text-left">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="font-bold text-white text-lg">Electric Blue</span>
+                    @if (currentTheme == "blue")
+                    {
+                        <span class="bi bi-check-circle-fill text-[#22d3ee] text-xl"></span>
+                    }
+                </div>
+                <div class="h-24 rounded-xl bg-gradient-to-br from-[#020617] to-[#0f172a] relative overflow-hidden border border-white/5">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.2),transparent)]"></div>
+                    <div class="absolute bottom-4 right-4 px-4 py-1 bg-[#22d3ee] text-black text-xs font-bold rounded-full shadow-[0_0_15px_rgba(34,211,238,0.4)]">Select</div>
+                </div>
+            </button>
+
+            <!-- Cyber Purple -->
+            <button @onclick="@(() => SetTheme("purple"))" class="group relative p-6 rounded-2xl border border-white/10 bg-black/40 hover:bg-white/5 transition-all duration-300 text-left">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="font-bold text-white text-lg">Cyber Purple</span>
+                    @if (currentTheme == "purple")
+                    {
+                        <span class="bi bi-check-circle-fill text-[#d946ef] text-xl"></span>
+                    }
+                </div>
+                <div class="h-24 rounded-xl bg-gradient-to-br from-[#0f0518] to-[#2e1065] relative overflow-hidden border border-white/5">
+                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(217,70,239,0.2),transparent)]"></div>
+                    <div class="absolute bottom-4 right-4 px-4 py-1 bg-[#d946ef] text-black text-xs font-bold rounded-full shadow-[0_0_15px_rgba(217,70,239,0.4)]">Select</div>
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string currentTheme = "green";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            currentTheme = await JSRuntime.InvokeAsync<string>("themeService.getTheme");
+            StateHasChanged();
+        }
+    }
+
+    private async Task SetTheme(string theme)
+    {
+        currentTheme = theme;
+        await JSRuntime.InvokeVoidAsync("themeService.setTheme", theme);
+    }
+}
