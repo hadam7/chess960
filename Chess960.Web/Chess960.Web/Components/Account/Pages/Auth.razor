@@ -1,0 +1,334 @@
+@page "/auth"
+@page "/login"
+@page "/register"
+@page "/Account/Login"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using Chess960.Web.Data
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject ILogger<Auth> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IUserStore<ApplicationUser> UserStore
+@inject IEmailSender<ApplicationUser> EmailSender
+
+<PageTitle>Authentication</PageTitle>
+
+<div class="min-h-screen flex items-center justify-center p-4 animate-soft-up">
+    <div class="relative bg-black/20 backdrop-blur-2xl rounded-[2rem] shadow-2xl overflow-hidden w-[850px] max-w-full min-h-[600px] border border-white/10 @(isSignUp ? "right-panel-active" : "")" id="container">
+        
+        <!-- Sign Up Form Container -->
+        <div class="form-container sign-up-container absolute top-0 h-full transition-all duration-600 ease-in-out left-0 w-1/2 z-10 @(isSignUp ? "opacity-100 z-50 translate-x-full pointer-events-auto" : "opacity-0 pointer-events-none")">
+            <div class="bg-transparent flex flex-col items-center justify-center h-full px-12 text-center">
+                <h1 class="font-display font-bold text-3xl text-white mb-6">Create Account</h1>
+                
+                <div class="social-container mb-4 flex gap-4 justify-center">
+                    <form action="Account/PerformExternalLogin" method="post" class="flex gap-4">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+                        <button type="submit" name="provider" value="Google" class="social w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-white/10 transition-colors" title="Log in using your Google account">
+                            <i class="bi bi-google"></i>
+                        </button>
+                    </form>
+                </div>
+                
+                <span class="text-theme-muted text-sm mb-4">or use your email for registration</span>
+                
+                <EditForm Model="RegisterInput" method="post" OnValidSubmit="RegisterUser" FormName="register" class="w-full">
+                    <DataAnnotationsValidator />
+                    <div class="w-full space-y-4">
+                        <div class="relative">
+                            <InputText @bind-Value="RegisterInput.Username" placeholder="Username" class="w-full bg-white/5 border-none rounded-lg p-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-theme-accent transition-all" />
+                            <ValidationMessage For="() => RegisterInput.Username" class="text-red-400 text-xs text-left mt-1 block" />
+                        </div>
+                        <div class="relative">
+                            <InputText @bind-Value="RegisterInput.Email" placeholder="Email" class="w-full bg-white/5 border-none rounded-lg p-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-theme-accent transition-all" />
+                            <ValidationMessage For="() => RegisterInput.Email" class="text-red-400 text-xs text-left mt-1 block" />
+                        </div>
+                        <div class="relative">
+                            <InputText type="password" @bind-Value="RegisterInput.Password" placeholder="Password" class="w-full bg-white/5 border-none rounded-lg p-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-theme-accent transition-all" />
+                            <ValidationMessage For="() => RegisterInput.Password" class="text-red-400 text-xs text-left mt-1 block" />
+                        </div>
+                        <div class="relative">
+                            <InputText type="password" @bind-Value="RegisterInput.ConfirmPassword" placeholder="Confirm Password" class="w-full bg-white/5 border-none rounded-lg p-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-theme-accent transition-all" />
+                            <ValidationMessage For="() => RegisterInput.ConfirmPassword" class="text-red-400 text-xs text-left mt-1 block" />
+                        </div>
+                    </div>
+
+                    <button type="submit" class="mt-8 btn-pill uppercase tracking-wider text-xs px-10 py-3">Sign Up</button>
+                    
+                    <StatusMessage Message="@RegisterMessage" />
+                </EditForm>
+            </div>
+        </div>
+
+        <!-- Sign In Form Container -->
+        <div class="form-container sign-in-container absolute top-0 h-full transition-all duration-600 ease-in-out left-0 w-1/2 z-20 @(isSignUp ? "translate-x-full opacity-0 pointer-events-none" : "opacity-100 pointer-events-auto")">
+            <div class="bg-transparent flex flex-col items-center justify-center h-full px-12 text-center">
+                <h1 class="font-display font-bold text-3xl text-white mb-6">Sign in</h1>
+                
+                <div class="social-container mb-4 flex gap-4 justify-center">
+                    <form action="Account/PerformExternalLogin" method="post" class="flex gap-4">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+                        <button type="submit" name="provider" value="Google" class="social w-10 h-10 rounded-full border border-white/20 flex items-center justify-center text-white hover:bg-white/10 transition-colors" title="Log in using your Google account">
+                            <i class="bi bi-google"></i>
+                        </button>
+                    </form>
+                </div>
+                
+                <span class="text-theme-muted text-sm mb-4">or use your account</span>
+                
+                <EditForm Model="LoginInput" method="post" OnValidSubmit="LoginUser" FormName="login" class="w-full">
+                    <DataAnnotationsValidator />
+                    <div class="w-full space-y-4">
+                        <div class="relative">
+                            <InputText @bind-Value="LoginInput.Email" placeholder="Email" class="w-full bg-white/5 border-none rounded-lg p-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-theme-accent transition-all" />
+                            <ValidationMessage For="() => LoginInput.Email" class="text-red-400 text-xs text-left mt-1 block" />
+                        </div>
+                        <div class="relative">
+                            <InputText type="password" @bind-Value="LoginInput.Password" placeholder="Password" class="w-full bg-white/5 border-none rounded-lg p-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-theme-accent transition-all" />
+                            <ValidationMessage For="() => LoginInput.Password" class="text-red-400 text-xs text-left mt-1 block" />
+                        </div>
+                    </div>
+
+                    <a href="Account/ForgotPassword" class="text-theme-muted text-xs mt-4 hover:text-white transition-colors block">Forgot your password?</a>
+                    
+                    <button type="submit" class="mt-8 btn-pill uppercase tracking-wider text-xs px-10 py-3">Sign In</button>
+                    
+                    <StatusMessage Message="@LoginErrorMessage" />
+                </EditForm>
+            </div>
+        </div>
+
+        <!-- Overlay Container -->
+        <div class="overlay-container absolute top-0 left-1/2 w-1/2 h-full overflow-hidden transition-transform duration-600 ease-in-out z-100 @(isSignUp ? "-translate-x-full" : "")">
+            <div class="overlay bg-[#1a1a1a] relative -left-full h-full w-[200%] transform transition-transform duration-600 ease-in-out @(isSignUp ? "translate-x-1/2" : "translate-x-0")">
+                
+                <!-- Decorative Background Elements -->
+                <div class="absolute inset-0 bg-gradient-to-br from-theme-accent/20 via-transparent to-theme-accent/5 pointer-events-none z-10"></div>
+                <div class="absolute inset-0 bg-[url('/images/noise.png')] opacity-5 pointer-events-none z-10"></div>
+                
+                <!-- Blurred Chess Piece Background -->
+                <div class="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
+                    <img src="images/auth-bg.png" class="w-[120%] max-w-none h-auto object-cover blur-sm mix-blend-overlay" alt="Chess Background" />
+                </div>
+                
+                <div class="absolute -bottom-1/2 -left-1/4 w-full h-full bg-theme-accent/10 blur-[100px] rounded-full pointer-events-none z-0"></div>
+                
+                <div class="overlay-panel overlay-left absolute flex flex-col items-center justify-center text-center top-0 h-full w-1/2 transform transition-transform duration-600 ease-in-out @(isSignUp ? "translate-x-0" : "-translate-x-[20%]")">
+                    <h1 class="font-display font-bold text-3xl mb-4 text-white">Hello, Friend!</h1>
+                    <p class="text-sm font-medium mb-8 px-8 opacity-70 text-white">Enter your personal details and start journey with us</p>
+                    <button type="button" class="btn-glass border-white/20 text-white hover:bg-white/10" onclick="togglePanel()">Sign In</button>
+                </div>
+                
+                <div class="overlay-panel overlay-right absolute right-0 flex flex-col items-center justify-center text-center top-0 h-full w-1/2 transform transition-transform duration-600 ease-in-out @(isSignUp ? "translate-x-[20%]" : "translate-x-0")">
+                    <h1 class="font-display font-bold text-3xl mb-4 text-white">Welcome Back!</h1>
+                    <p class="text-sm font-medium mb-8 px-8 opacity-70 text-white">To keep connected with us please login with your personal info</p>
+                    <button type="button" class="btn-glass border-white/20 text-white hover:bg-white/10" onclick="togglePanel()">Sign Up</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Custom styles for the sliding animation that Tailwind can't handle easily with just classes */
+    .form-container {
+        transition: all 0.6s ease-in-out;
+    }
+    
+    .overlay-container {
+        z-index: 100;
+    }
+    
+    /* JS Toggle Classes - using the ID to ensure specificity over Tailwind classes */
+    #container.right-panel-active .sign-in-container {
+        transform: translateX(100%);
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    #container.right-panel-active .sign-up-container {
+        transform: translateX(100%);
+        opacity: 1;
+        z-index: 50;
+        pointer-events: auto;
+    }
+    
+    #container.right-panel-active .overlay-container {
+        transform: translateX(-100%);
+    }
+    
+    #container.right-panel-active .overlay {
+        transform: translateX(50%);
+    }
+    
+    #container.right-panel-active .overlay-left {
+        transform: translateX(0);
+    }
+    
+    #container.right-panel-active .overlay-right {
+        transform: translateX(20%);
+    }
+</style>
+
+
+
+@code {
+    private bool isSignUp = false;
+    
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    // Login State
+    [SupplyParameterFromForm(FormName = "login")]
+    private LoginInputModel LoginInput { get; set; } = new();
+    private string? LoginErrorMessage;
+
+    // Register State
+    [SupplyParameterFromForm(FormName = "register")]
+    private RegisterInputModel RegisterInput { get; set; } = new();
+    private IEnumerable<IdentityError>? identityErrors;
+    private string? RegisterMessage => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        // Check URL to decide initial state
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        if (uri.AbsolutePath.Contains("register", StringComparison.OrdinalIgnoreCase))
+        {
+            isSignUp = true;
+        }
+        else
+        {
+            isSignUp = false;
+        }
+    }
+    
+    // TogglePanel removed as it's now JS only for interactivity
+
+
+    // Login Logic
+    public async Task LoginUser()
+    {
+        var user = await UserManager.FindByEmailAsync(LoginInput.Email);
+        if (user == null)
+        {
+            LoginErrorMessage = "Error: Invalid login attempt.";
+            return;
+        }
+
+        var result = await SignInManager.PasswordSignInAsync(user.UserName!, LoginInput.Password, LoginInput.RememberMe, lockoutOnFailure: false);
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("User logged in.");
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else
+        {
+            LoginErrorMessage = "Error: Invalid login attempt.";
+        }
+    }
+
+    // Register Logic
+    public async Task RegisterUser()
+    {
+        var user = CreateUser();
+
+        await UserStore.SetUserNameAsync(user, RegisterInput.Username, CancellationToken.None);
+        var emailStore = GetEmailStore();
+        await emailStore.SetEmailAsync(user, RegisterInput.Email, CancellationToken.None);
+        var result = await UserManager.CreateAsync(user, RegisterInput.Password);
+
+        if (!result.Succeeded)
+        {
+            identityErrors = result.Errors;
+            return;
+        }
+
+        Logger.LogInformation("User created a new account with password.");
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+
+        await EmailSender.SendConfirmationLinkAsync(user, RegisterInput.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        await SignInManager.SignInAsync(user, isPersistent: false);
+        RedirectManager.RedirectTo(ReturnUrl);
+    }
+
+    private ApplicationUser CreateUser()
+    {
+        try
+        {
+            return Activator.CreateInstance<ApplicationUser>();
+        }
+        catch
+        {
+            throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
+                $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
+        }
+    }
+
+    private IUserEmailStore<ApplicationUser> GetEmailStore()
+    {
+        if (!UserManager.SupportsUserEmail)
+        {
+            throw new NotSupportedException("The default UI requires a user store with email support.");
+        }
+        return (IUserEmailStore<ApplicationUser>)UserStore;
+    }
+
+    // Models
+    public class LoginInputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        [Display(Name = "Remember me?")]
+        public bool RememberMe { get; set; }
+    }
+
+    public class RegisterInputModel
+    {
+        [Required]
+        [Display(Name = "Username")]
+        public string Username { get; set; } = "";
+
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+    }
+}
