@@ -1,0 +1,116 @@
+@page "/play-online"
+@using Chess960.Web.Client.Services
+@using Chess960.Web.Client.Components
+@inject MultiplayerService Multiplayer
+@inject ChessGameService GameService
+@inject NavigationManager Nav
+@implements IAsyncDisposable
+@rendermode InteractiveWebAssembly
+
+<PageTitle>Online Match - Chess960</PageTitle>
+
+<div class="min-h-screen flex flex-col items-center justify-center p-4 animate-soft-up">
+    <div class="w-full max-w-4xl flex flex-col md:flex-row gap-8 items-start justify-center">
+        
+        <!-- Game Board -->
+        <div class="flex-1 w-full flex justify-center">
+            <ChessBoard IsWhiteSide="@amIWhite" OnMove="HandleLocalMove" />
+        </div>
+
+        <!-- Game Info / Chat (Future) -->
+        <div class="glass-panel p-6 w-full md:w-80 h-auto md:h-[600px] flex flex-col">
+            <h2 class="text-2xl font-display font-bold text-white mb-4">Match Info</h2>
+            
+            <div class="space-y-4 mb-auto">
+                <div class="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+                    <div class="w-10 h-10 rounded-full bg-theme-accent flex items-center justify-center font-bold text-black">
+                        @(amIWhite ? "ME" : "OP")
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold text-white">White</div>
+                        <div class="text-xs text-theme-muted">@(amIWhite ? "You" : "Opponent")</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 p-3 bg-white/5 rounded-lg">
+                    <div class="w-10 h-10 rounded-full bg-theme-glow flex items-center justify-center font-bold text-black">
+                        @(!amIWhite ? "ME" : "OP")
+                    </div>
+                    <div>
+                        <div class="text-sm font-bold text-white">Black</div>
+                        <div class="text-xs text-theme-muted">@(!amIWhite ? "You" : "Opponent")</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-white/10">
+                <a href="/" class="btn-glass w-full flex items-center justify-center gap-2 text-sm">
+                    <span class="bi bi-flag-fill"></span> Resign / Leave
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "id")]
+    public string? GameId { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Fen { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? White { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Black { get; set; }
+
+    private bool amIWhite;
+    private string? myConnectionId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Multiplayer.InitializeAsync();
+        myConnectionId = Multiplayer.MyConnectionId;
+
+        // Determine side
+        if (myConnectionId == White) amIWhite = true;
+        else if (myConnectionId == Black) amIWhite = false;
+        else 
+        {
+            amIWhite = true; // Fallback
+        }
+
+        // Initialize game
+        if (!string.IsNullOrEmpty(Fen))
+        {
+            GameService.StartGameFromFen(Fen);
+        }
+
+        Multiplayer.OnMoveMade += HandleRemoteMove;
+    }
+
+    private async Task HandleLocalMove((string from, string to) move)
+    {
+        if (!string.IsNullOrEmpty(GameId))
+        {
+             await Multiplayer.MakeMove(GameId, move.from + move.to);
+        }
+    }
+
+    private void HandleRemoteMove(string moveString, string fen)
+    {
+        // Apply move from opponent
+        // moveString is like "e2e4"
+        var from = moveString.Substring(0, 2);
+        var to = moveString.Substring(2, 2);
+        
+        GameService.MakeMove(from, to);
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Multiplayer.OnMoveMade -= HandleRemoteMove;
+    }
+}

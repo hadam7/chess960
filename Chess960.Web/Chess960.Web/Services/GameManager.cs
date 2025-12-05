@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Rudzoft.ChessLib;
 using Rudzoft.ChessLib.Factories;
 using Rudzoft.ChessLib.Types;
+using Rudzoft.ChessLib.MoveGeneration;
 
 namespace Chess960.Web.Services;
 

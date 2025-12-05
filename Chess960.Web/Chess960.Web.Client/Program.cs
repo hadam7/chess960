@@ -8,5 +8,6 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthenticationStateDeserialization();
 
 builder.Services.AddScoped<ChessGameService>();
+builder.Services.AddScoped<MultiplayerService>();
 
 await builder.Build().RunAsync();

@@ -22,7 +22,7 @@ public class GameHub : Hub
             await Groups.AddToGroupAsync(session.BlackPlayerId!, session.GameId);
             
             // Notify both players
-            await Clients.Group(session.GameId).SendAsync("GameStarted", session.Game.Pos.FenNotation, session.WhitePlayerId, session.BlackPlayerId);
+            await Clients.Group(session.GameId).SendAsync("GameStarted", session.GameId, session.Game.Pos.FenNotation, session.WhitePlayerId, session.BlackPlayerId);
         }
         else
         {
