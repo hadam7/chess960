@@ -1,5 +1,6 @@
 @page "/settings"
-@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Web
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @inject IJSRuntime JSRuntime
 
 <div class="max-w-4xl mx-auto animate-soft-up">

@@ -5,124 +5,213 @@
 @inject ChessGameService GameService
 @inject NavigationManager Nav
 @implements IAsyncDisposable
+@using System.Threading
 @rendermode InteractiveWebAssembly
 
 <PageTitle>Play Chess960 Online</PageTitle>
 
 <div class="h-[calc(100vh-4rem)] flex flex-col md:flex-row overflow-hidden animate-soft-up">
     
-    <!-- LEFT: Game Board Area -->
-    <div class="flex-1 relative flex justify-center items-center p-4">
-        <!-- Board Container with Glow -->
-        <div class="relative group">
-            <div class="absolute -inset-1 bg-gradient-to-r from-theme-accent to-theme-glow opacity-20 blur-xl group-hover:opacity-40 transition duration-1000"></div>
-            <div class="relative w-full max-w-[85vh] aspect-square shadow-2xl rounded-lg overflow-hidden border-4 border-white/5 bg-black/50 backdrop-blur-sm">
-                <ChessBoard IsWhiteSide="@amIWhite" OnMove="HandleLocalMove" />
-            </div>
-        </div>
-
-        <!-- Player Info Overlays (Only visible when game is active) -->
+    <!-- LEFT: Game Area (Bars + Board) -->
+    <div class="flex-1 flex flex-col items-center justify-center p-2 gap-2">
+        
+        <!-- Opponent Bar -->
         @if (!string.IsNullOrEmpty(GameId))
         {
-            <div class="absolute top-4 left-4 flex items-center gap-3 bg-black/60 backdrop-blur-md p-2 rounded-lg text-white font-bold border border-white/10 shadow-lg">
-                <div class="w-10 h-10 rounded bg-white/10 flex items-center justify-center border border-white/10">
-                    <span class="bi bi-person-fill text-xl"></span>
+            <div class="w-full max-w-[85vh] flex items-center justify-between bg-black/60 backdrop-blur-md rounded p-2 text-white shadow-lg border border-white/5">
+                <div class="flex items-center gap-3">
+                     <div class="w-10 h-10 rounded bg-white/10 flex items-center justify-center border border-white/10">
+                        <span class="bi bi-person-fill text-xl text-white/50"></span>
+                    </div>
+                    <div class="flex flex-col leading-tight">
+                        <span class="font-bold text-sm">Opponent</span>
+                        <span class="text-xs text-theme-muted">1500</span>
+                    </div>
                 </div>
-                <div class="flex flex-col leading-tight">
-                    <span class="text-xs text-theme-muted uppercase tracking-wider">Opponent</span>
-                    <span>Unknown</span>
+                <!-- Dead Pieces (Placeholder) -->
+                <div class="flex-1"></div>
+                <!-- Clock -->
+                <div class="bg-black/30 px-3 py-1 rounded font-mono text-xl font-bold @(IsOpponentTurn ? "text-white bg-white/10" : "text-white/40")">
+                    @FormatTime(OpponentTimeMs)
                 </div>
             </div>
+        }
 
-            <div class="absolute bottom-4 left-4 flex items-center gap-3 bg-black/60 backdrop-blur-md p-2 rounded-lg text-white font-bold border border-white/10 shadow-lg">
-                <div class="w-10 h-10 rounded bg-theme-accent text-black flex items-center justify-center shadow-[0_0_15px_rgba(var(--color-accent),0.3)]">
-                    <span class="bi bi-person-fill text-xl"></span>
+        <!-- Board -->
+        <div class="relative w-full max-w-[85vh] aspect-square shadow-2xl rounded overflow-hidden border-4 border-white/5 bg-black/50">
+             <ChessBoard IsWhiteSide="@amIWhite" OnMove="HandleLocalMove" />
+        </div>
+
+        <!-- Player Bar -->
+        @if (!string.IsNullOrEmpty(GameId))
+        {
+            <div class="w-full max-w-[85vh] flex items-center justify-between bg-black/60 backdrop-blur-md rounded p-2 text-white shadow-lg border border-white/5">
+                <div class="flex items-center gap-3">
+                     <div class="w-10 h-10 rounded bg-theme-accent text-black flex items-center justify-center shadow-[0_0_15px_rgba(var(--color-accent),0.3)]">
+                        <span class="bi bi-person-fill text-xl"></span>
+                    </div>
+                    <div class="flex flex-col leading-tight">
+                        <span class="font-bold text-sm">You</span>
+                        <span class="text-xs text-theme-muted">1500</span>
+                    </div>
                 </div>
-                <div class="flex flex-col leading-tight">
-                    <span class="text-xs text-theme-muted uppercase tracking-wider">You</span>
-                    <span>Me</span>
+                 <!-- Dead Pieces (Placeholder) -->
+                <div class="flex-1"></div>
+                <!-- Clock -->
+                 <div class="bg-black/30 px-3 py-1 rounded font-mono text-xl font-bold @(IsMyTurn ? "bg-white text-black" : "text-white/40")">
+                    @FormatTime(MyTimeMs)
                 </div>
             </div>
         }
     </div>
 
     <!-- RIGHT: Sidebar Controls -->
-    <div class="w-full md:w-[450px] glass-panel border-l border-white/5 relative z-20 flex flex-col">
+    <div class="w-full md:w-[400px] bg-black/20 backdrop-blur-xl border-l border-white/5 relative z-20 flex flex-col">
         
         <!-- Sidebar Tabs -->
-        <div class="flex border-b border-white/5 bg-black/20">
+         <div class="flex bg-black/20 border-b border-white/5">
+            @if (!string.IsNullOrEmpty(GameId))
+            {
+                <button class="@GetTabClass("game")" @onclick="@(() => activeTab = "game")">
+                    <span class="bi bi-lightning-fill text-lg mb-1"></span>
+                    <span class="text-xs font-bold uppercase tracking-wide">Játék</span>
+                </button>
+            }
             <button class="@GetTabClass("new-game")" @onclick="@(() => activeTab = "new-game")">
-                <span class="bi bi-plus-square-fill text-xl mb-1"></span>
+                <span class="bi bi-plus-square-fill text-lg mb-1"></span>
                 <span class="text-xs font-bold uppercase tracking-wide">Új játszma</span>
             </button>
             <button class="@GetTabClass("games")" @onclick="@(() => activeTab = "games")">
-                <span class="bi bi-grid-3x3-gap-fill text-xl mb-1"></span>
+                <span class="bi bi-grid-3x3-gap-fill text-lg mb-1"></span>
                 <span class="text-xs font-bold uppercase tracking-wide">Játszmák</span>
             </button>
             <button class="@GetTabClass("players")" @onclick="@(() => activeTab = "players")">
-                <span class="bi bi-people-fill text-xl mb-1"></span>
+                <span class="bi bi-people-fill text-lg mb-1"></span>
                 <span class="text-xs font-bold uppercase tracking-wide">Játékosok</span>
             </button>
         </div>
 
         <!-- Tab Content -->
-        <div class="flex-1 overflow-y-auto p-8 flex flex-col items-center text-center">
+        <div class="flex-1 overflow-y-auto flex flex-col relative">
             
-            @if (activeTab == "new-game")
+            @if (activeTab == "game" && !string.IsNullOrEmpty(GameId))
             {
-                <h2 class="text-3xl font-display font-bold text-white mb-2 mt-4">Play Chess<span class="text-theme-accent">960</span></h2>
-                <p class="text-theme-muted mb-8 text-sm">Challenge players worldwide in the Fischer Random variation.</p>
-
-                <!-- Time Control Selector -->
-                <div class="w-full mb-8">
-                    <button class="w-full btn-glass flex items-center justify-between group">
-                        <div class="flex items-center gap-3">
-                            <span class="bi bi-lightning-fill text-theme-accent group-hover:scale-110 transition-transform"></span>
-                            <span class="font-bold">3 perc</span>
+                <!-- Move List -->
+                <div class="flex-1 overflow-y-auto p-0 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                     <table class="w-full text-sm text-left">
+                         <thead class="bg-white/5 text-xs uppercase text-theme-muted sticky top-0 backdrop-blur-md">
+                             <tr>
+                                 <th class="px-4 py-2 w-10">#</th>
+                                 <th class="px-4 py-2">White</th>
+                                 <th class="px-4 py-2">Black</th>
+                             </tr>
+                         </thead>
+                         <tbody>
+                             @for (int i = 0; i < moveList.Count; i += 2)
+                             {
+                                 var moveNum = (i / 2) + 1;
+                                 var whiteMove = moveList[i];
+                                 var blackMove = (i + 1 < moveList.Count) ? moveList[i + 1] : "";
+                                 
+                                 <tr class="border-b border-white/5 hover:bg-white/5 transition-colors @(i/2 % 2 == 0 ? "bg-white/[0.02]" : "")">
+                                     <td class="px-4 py-2 text-theme-muted font-mono text-xs">@moveNum.</td>
+                                     <td class="px-4 py-2 font-bold cursor-pointer hover:text-theme-accent">@whiteMove</td>
+                                     <td class="px-4 py-2 font-bold cursor-pointer hover:text-theme-accent">@blackMove</td>
+                                 </tr>
+                             }
+                         </tbody>
+                     </table>
+                     
+                    @if (moveList.Count == 0)
+                    {
+                        <div class="flex flex-col items-center justify-center h-40 text-theme-muted opacity-50">
+                            <span class="bi bi-hourglass-split text-3xl mb-2"></span>
+                            <span>Game started</span>
                         </div>
-                        <span class="bi bi-chevron-down text-white/50"></span>
-                    </button>
-                    <div class="text-xs text-theme-muted mt-2 text-right opacity-70">Rapid • Nem jegyzett</div>
+                    }
                 </div>
 
-                <!-- Main Action Button -->
-                @if (isSearching)
-                {
-                    <div class="w-full py-8 bg-white/5 rounded-xl flex flex-col items-center justify-center animate-pulse mb-6 border border-white/10">
-                        <div class="w-12 h-12 border-4 border-theme-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <div class="text-theme-accent font-bold text-lg mb-2 tracking-widest uppercase">Keresés...</div>
-                        <button @onclick="CancelSearch" class="text-white/40 hover:text-white text-xs uppercase tracking-widest font-bold mt-2 hover:underline">Mégse</button>
+                <!-- Game Controls -->
+                <div class="p-4 bg-black/20 border-t border-white/5">
+                    <!-- Navigation (Visual only + Resign) -->
+                    <div class="flex items-center justify-center gap-2 mb-4">
+                        <button class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors"><span class="bi bi-skip-backward-fill"></span></button>
+                        <button class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors"><span class="bi bi-caret-left-fill"></span></button>
+                        <button class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors"><span class="bi bi-caret-right-fill"></span></button>
+                        <button class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors"><span class="bi bi-skip-forward-fill"></span></button>
                     </div>
-                }
-                else if (string.IsNullOrEmpty(GameId))
-                {
-                    <button @onclick="FindMatch" class="w-full btn-pill text-xl py-5 shadow-[0_0_30px_rgba(var(--color-accent),0.3)] hover:shadow-[0_0_50px_rgba(var(--color-accent),0.5)] mb-6 flex items-center justify-center gap-3 group">
-                        <span>Játék indítása</span>
-                        <span class="bi bi-play-fill text-3xl group-hover:translate-x-1 transition-transform"></span>
-                    </button>
-                }
-                else
-                {
-                   <div class="w-full py-8 bg-green-500/10 border border-green-500/20 rounded-xl flex flex-col items-center justify-center mb-4">
-                        <div class="text-green-400 font-bold text-lg mb-1">JÁTÉK FOLYAMATBAN</div>
-                        <div class="text-white/60 text-sm">Sok sikert!</div>
-                    </div> 
-                }
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                         <button class="bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors rounded text-xs py-2 flex items-center justify-center gap-2">
+                             <span class="bi bi-flag-fill"></span> Feladás
+                         </button>
+                          <button class="bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors rounded text-xs py-2 flex items-center justify-center gap-2">
+                             <span class="bi bi-circle-half"></span> Döntetlen
+                         </button>
+                    </div>
+                </div>
+            }
+            else if (activeTab == "new-game")
+            {
+                <div class="p-8 text-center">
+                    <h2 class="text-3xl font-display font-bold text-white mb-2 mt-4">Play Chess<span class="text-theme-accent">960</span></h2>
+                    <!-- ... (Existing New Game Content) ... -->
+                    <div class="w-full mb-8 space-y-4">
+                        <!-- ... (We keep the content but abbreviated here for brevity if it was large, but I will include it) ... -->
+                         <!-- Section: Rapid -->
+                        <div class="text-left">
+                            <div class="text-xs text-theme-muted font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <span class="bi bi-stopwatch-fill"></span> Normál (Rapid)
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button @onclick="@(() => selectedTimeControl = "10+0")" class="@GetTimeClass("10+0")">10 p</button>
+                                <button @onclick="@(() => selectedTimeControl = "15+10")" class="@GetTimeClass("15+10")">15|10</button>
+                                <button @onclick="@(() => selectedTimeControl = "30+0")" class="@GetTimeClass("30+0")">30 p</button>
+                            </div>
+                        </div>
+                        <!-- Section: Blitz -->
+                        <div class="text-left">
+                            <div class="text-xs text-theme-muted font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <span class="bi bi-lightning-fill"></span> Villám (Blitz)
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button @onclick="@(() => selectedTimeControl = "3+0")" class="@GetTimeClass("3+0")">3 p</button>
+                                <button @onclick="@(() => selectedTimeControl = "3+2")" class="@GetTimeClass("3+2")">3|2</button>
+                                <button @onclick="@(() => selectedTimeControl = "5+0")" class="@GetTimeClass("5+0")">5 p</button>
+                            </div>
+                        </div>
+                         <!-- Section: Bullet -->
+                        <div class="text-left">
+                            <div class="text-xs text-theme-muted font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <span class="bi bi-rocket-takeoff-fill"></span> Bullet
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button @onclick="@(() => selectedTimeControl = "1+0")" class="@GetTimeClass("1+0")">1 p</button>
+                                <button @onclick="@(() => selectedTimeControl = "1+1")" class="@GetTimeClass("1+1")">1|1</button>
+                                <button @onclick="@(() => selectedTimeControl = "2+1")" class="@GetTimeClass("2+1")">2|1</button>
+                            </div>
+                        </div>
+                    </div>
 
-                <!-- Secondary Actions -->
-                <div class="w-full space-y-3">
-                    <button class="w-full btn-glass p-4 rounded-xl flex items-center gap-4 text-left group">
-                        <span class="bi bi-gear-fill text-white/30 text-xl group-hover:text-white transition-colors"></span>
-                        <span class="font-medium text-white/80 group-hover:text-white">Egyéni kihívás</span>
-                    </button>
-                    <button class="w-full btn-glass p-4 rounded-xl flex items-center gap-4 text-left group">
-                        <span class="bi bi-person-plus-fill text-white/30 text-xl group-hover:text-white transition-colors"></span>
-                        <span class="font-medium text-white/80 group-hover:text-white">Ismerős kihívás</span>
-                    </button>
-                    <button class="w-full btn-glass p-4 rounded-xl flex items-center gap-4 text-left group">
-                        <span class="bi bi-trophy-fill text-amber-500/70 text-xl group-hover:text-amber-400 transition-colors"></span>
-                        <span class="font-medium text-white/80 group-hover:text-white">Versenyek</span>
-                    </button>
+                    @if (isSearching)
+                    {
+                         <div class="w-full py-8 bg-white/5 rounded-xl flex flex-col items-center justify-center animate-pulse mb-6 border border-white/10">
+                            <div class="w-12 h-12 border-4 border-theme-accent border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <div class="text-theme-accent font-bold text-lg mb-2 tracking-widest uppercase">Keresés...</div>
+                            <button @onclick="CancelSearch" class="text-white/40 hover:text-white text-xs uppercase tracking-widest font-bold mt-2 hover:underline">Mégse</button>
+                        </div>
+                    }
+                    else if (string.IsNullOrEmpty(GameId))
+                    {
+                          <button @onclick="FindMatch" class="w-full btn-pill text-xl py-5 shadow-[0_0_30px_rgba(var(--color-accent),0.3)] hover:shadow-[0_0_50px_rgba(var(--color-accent),0.5)] mb-6 flex items-center justify-center gap-3 group">
+                            <span>Játék</span>
+                            <span class="bi bi-play-fill text-3xl group-hover:translate-x-1 transition-transform"></span>
+                        </button>
+                    }
+                    else 
+                    {
+                        <div class="text-green-400 font-bold mb-4">Játék Folyamatban!</div>
+                    }
                 </div>
             }
             else if (activeTab == "games")
@@ -132,26 +221,38 @@
                      <span>Nincsenek aktív játszmák.</span>
                  </div>
             }
-            else if (activeTab == "players")
+             else if (activeTab == "players")
             {
                 <div class="text-theme-muted py-10 flex flex-col items-center gap-4">
                      <span class="bi bi-people text-4xl opacity-20"></span>
-                     <span>Játékoslista hamarosan...</span>
+                     <span>Lista hamarosan...</span>
                 </div>
             }
-
         </div>
-
-        <!-- Footer Stats -->
-        <div class="p-6 flex justify-between text-xs font-bold text-theme-muted border-t border-white/5 bg-black/20">
+        
+         <!-- Footer Stats -->
+        <div class="p-4 flex justify-between text-[10px] font-bold text-theme-muted border-t border-white/5 bg-black/20">
             <div class="flex items-center gap-2">
-                <span class="bi bi-activity text-theme-accent"></span>
-                <span>157 585 JÁTÉKOS</span>
+                <span class="bi bi-circle-fill text-green-500 text-[6px]"></span>
+                <span>157k Online</span>
             </div>
-            <div>20 635 103 MAI JÁTSZMA</div>
+            <div>20M Játszma</div>
         </div>
+
     </div>
 </div>
+
+<style>
+
+    /* Custom Scrollbar for sidebar */
+    .scrollbar-thin::-webkit-scrollbar {
+        width: 6px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        background-color: rgba(255,255,255,0.1);
+        border-radius: 3px;
+    }
+</style>
 
 @code {
     [SupplyParameterFromQuery(Name = "id")]
@@ -167,31 +268,53 @@
     public string? Black { get; set; }
 
     private bool amIWhite = true;
-    private string? myConnectionId;
     private bool isSearching = false;
     private string activeTab = "new-game";
+    private string selectedTimeControl = "3+2"; 
+    
+    // Time State
+    private long WhiteTimeMs { get; set; }
+    private long BlackTimeMs { get; set; }
+    private Timer? clockTimer;
+
+    // Track moves locally for display
+    private List<string> moveList = new();
+
+    private long MyTimeMs => amIWhite ? WhiteTimeMs : BlackTimeMs;
+    private long OpponentTimeMs => amIWhite ? BlackTimeMs : WhiteTimeMs;
+    private bool IsMyTurn => GameService.Game != null && amIWhite == GameService.Game.Pos.SideToMove.IsWhite;
+    private bool IsOpponentTurn => GameService.Game != null && amIWhite != GameService.Game.Pos.SideToMove.IsWhite;
 
     protected override async Task OnInitializedAsync()
     {
         await Multiplayer.InitializeAsync();
-        myConnectionId = Multiplayer.MyConnectionId;
         
         Multiplayer.OnWaitingForMatch += HandleWaiting;
         Multiplayer.OnGameStarted += HandleGameStarted;
         Multiplayer.OnMoveMade += HandleRemoteMove;
 
+        if (!string.IsNullOrEmpty(GameId))
+        {
+            await Multiplayer.JoinGame(GameId);
+            activeTab = "game";
+        }
+        else 
+        {
+            activeTab = "new-game";
+        }
+
         CheckGameStatus();
+        StartClockTimer();
     }
 
     private void CheckGameStatus()
     {
         if (!string.IsNullOrEmpty(GameId))
         {
-            // Determine side
-            if (myConnectionId == White) amIWhite = true;
-            else if (myConnectionId == Black) amIWhite = false;
+            var myId = Multiplayer.UserId;
+            if (myId == White) amIWhite = true;
+            else if (myId == Black) amIWhite = false;
             
-            // Initialize game board
             if (!string.IsNullOrEmpty(Fen))
             {
                 GameService.StartGameFromFen(Fen);
@@ -199,17 +322,31 @@
         }
     }
 
+    private void StartClockTimer()
+    {
+        clockTimer = new Timer(_ => 
+        {
+            if (!string.IsNullOrEmpty(GameId) && GameService.Game != null)
+            {
+                 var sideToMove = GameService.Game.Pos.SideToMove.IsWhite;
+                 if (sideToMove) WhiteTimeMs = Math.Max(0, WhiteTimeMs - 100);
+                 else BlackTimeMs = Math.Max(0, BlackTimeMs - 100);
+                 
+                 InvokeAsync(StateHasChanged);
+            }
+        }, null, 0, 100);
+    }
+
     private async Task FindMatch()
     {
         if (isSearching) return;
         isSearching = true;
-        await Multiplayer.FindMatch();
+        await Multiplayer.FindMatch(selectedTimeControl);
     }
 
     private void CancelSearch()
     {
         isSearching = false;
-        // Ideally send cancel to backend
     }
 
     private void HandleWaiting()
@@ -218,15 +355,19 @@
         StateHasChanged();
     }
 
-    private void HandleGameStarted(string gameId, string fen, string whiteId, string blackId)
+    private void HandleGameStarted(string gameId, string fen, string whiteId, string blackId, long whiteTime, long blackTime)
     {
         isSearching = false;
         GameId = gameId;
         Fen = fen;
         White = whiteId;
         Black = blackId;
+        WhiteTimeMs = whiteTime;
+        BlackTimeMs = blackTime;
         
-        // Update URL without reload
+        moveList.Clear(); // New game
+        activeTab = "game";
+
         Nav.NavigateTo($"/play-online?id={gameId}&fen={Uri.EscapeDataString(fen)}&white={whiteId}&black={blackId}", false);
 
         CheckGameStatus();
@@ -237,30 +378,59 @@
     {
         if (!string.IsNullOrEmpty(GameId))
         {
+             // Add to list optimistically or wait for server?
+             // Ideally wait, but for responsiveness...
+             // Let's rely on GameService update or just push to server.
              await Multiplayer.MakeMove(GameId, move.from + move.to);
         }
     }
 
-    private void HandleRemoteMove(string moveString, string fen)
+    private void HandleRemoteMove(string moveString, string fen, long whiteTime, long blackTime)
     {
         var from = moveString.Substring(0, 2);
         var to = moveString.Substring(2, 2);
+        
+        WhiteTimeMs = whiteTime;
+        BlackTimeMs = blackTime;
+        
+        // Add move to history
+        moveList.Add(moveString); // Simple string for now, could enhance with notation later
+
         GameService.MakeMove(from, to);
         StateHasChanged();
     }
 
     private string GetTabClass(string tabName)
     {
-        var baseClass = "flex-1 py-4 flex flex-col items-center justify-center transition-colors border-b-2 outline-none";
+        var baseClass = "flex-1 py-3 flex flex-col items-center justify-center transition-colors outline-none border-b-2";
         if (activeTab == tabName)
         {
-            return $"{baseClass} text-theme-accent border-theme-accent bg-white/5"; // Active
+            return $"{baseClass} bg-black/40 text-theme-accent border-theme-accent"; 
         }
-        return $"{baseClass} text-theme-muted hover:text-white hover:bg-white/5 border-transparent";
+        return $"{baseClass} hover:bg-white/5 text-theme-muted hover:text-white border-transparent";
+    }
+    
+    private string GetTimeClass(string timeControl)
+    {
+         var baseClass = "p-2 rounded border text-xs font-bold transition-all";
+         if (selectedTimeControl == timeControl)
+         {
+             return $"{baseClass} bg-theme-accent text-black border-theme-accent";
+         }
+         return $"{baseClass} bg-black/40 border-white/10 text-theme-muted hover:bg-white/10 hover:text-white";
+    }
+    
+    private string FormatTime(long ms)
+    {
+        var span = TimeSpan.FromMilliseconds(ms);
+        if (span.TotalHours >= 1) return span.ToString(@"h\:mm\:ss");
+        return span.ToString(@"mm\:ss");
     }
 
     public async ValueTask DisposeAsync()
     {
+        if (clockTimer is not null) await clockTimer.DisposeAsync();
+        
         Multiplayer.OnWaitingForMatch -= HandleWaiting;
         Multiplayer.OnGameStarted -= HandleGameStarted;
         Multiplayer.OnMoveMade -= HandleRemoteMove;

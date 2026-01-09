@@ -75,6 +75,16 @@ public class ChessGameService
         return false;
     }
 
+    public IEnumerable<string> GetLegalMovesFor(string fromSquare)
+    {
+        var from = new Square(fromSquare);
+        var moveList = Game.Pos.GenerateMoves();
+        
+        return moveList
+            .Where(m => m.Move.FromSquare() == from)
+            .Select(m => m.Move.ToSquare().ToString().ToLower());
+    }
+
     private void UpdateGameState()
     {
         GameOverMessage = "";

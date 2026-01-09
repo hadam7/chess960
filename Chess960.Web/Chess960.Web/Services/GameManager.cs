@@ -9,59 +9,55 @@ namespace Chess960.Web.Services;
 public class GameManager
 {
     private readonly ConcurrentDictionary<string, GameSession> _games = new();
-    private readonly ConcurrentQueue<string> _waitingPlayers = new();
+    // Key: TimeControl (e.g., "3+2"), Value: Queue of waiting players
+    private readonly ConcurrentDictionary<string, ConcurrentQueue<(string ConnectionId, string UserId)>> _waitingQueues = new();
 
-    public GameSession? FindMatch(string playerConnectionId)
+    public GameSession? FindMatch(string playerConnectionId, string userId, string timeControl)
     {
-        if (_waitingPlayers.TryDequeue(out var opponentId))
+        var queue = _waitingQueues.GetOrAdd(timeControl, _ => new ConcurrentQueue<(string ConnectionId, string UserId)>());
+
+        if (queue.TryDequeue(out var opponent))
         {
             // Prevent matching with self if clicked twice quickly
-            if (opponentId == playerConnectionId)
+            if (opponent.UserId == userId)
             {
-                _waitingPlayers.Enqueue(playerConnectionId);
+                queue.Enqueue(opponent);
                 return null;
             }
             
-            return CreateGame(opponentId, playerConnectionId);
+            return CreateGame(opponent.ConnectionId, opponent.UserId, playerConnectionId, userId, timeControl);
         }
         
-        _waitingPlayers.Enqueue(playerConnectionId);
+        queue.Enqueue((playerConnectionId, userId));
         return null;
     }
 
-    public GameSession CreateGame(string whitePlayerId, string blackPlayerId)
+    public GameSession CreateGame(string whiteConnectionId, string whiteUserId, string blackConnectionId, string blackUserId, string timeControlIn)
     {
         var gameId = GenerateGameId();
         var game = GameFactory.Create();
         game.NewGame();
 
-        var session = new GameSession
-        {
-            GameId = gameId,
-            HostConnectionId = whitePlayerId, // Host is White for now
-            Game = game,
-            WhitePlayerId = whitePlayerId,
-            BlackPlayerId = blackPlayerId
-        };
-
-        _games.TryAdd(gameId, session);
-        return session;
-    }
-
-    // Kept for manual creation if needed later, but refactored to use common logic could be better
-    public GameSession CreateHostedGame(string hostConnectionId, string? fen = null)
-    {
-        var gameId = GenerateGameId();
-        var game = GameFactory.Create(fen ?? GameFactory.Create().Pos.FenNotation);
-        
-        if (fen == null) game.NewGame();
+        // Parse Time Control (Format: "minutes+increment" e.g., "3+2")
+        var parts = timeControlIn.Split('+');
+        int minutes = int.Parse(parts[0]);
+        int increment = int.Parse(parts[1]);
+        long totalMilliseconds = minutes * 60 * 1000;
 
         var session = new GameSession
         {
             GameId = gameId,
-            HostConnectionId = hostConnectionId,
+            HostConnectionId = whiteConnectionId,
             Game = game,
-            WhitePlayerId = hostConnectionId
+            WhitePlayerId = whiteConnectionId,
+            WhiteUserId = whiteUserId,
+            BlackPlayerId = blackConnectionId,
+            BlackUserId = blackUserId,
+            TimeControl = timeControlIn,
+            WhiteTimeRemainingMs = totalMilliseconds,
+            BlackTimeRemainingMs = totalMilliseconds,
+            IncrementMs = increment * 1000,
+            LastMoveTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
         };
 
         _games.TryAdd(gameId, session);
@@ -74,13 +70,27 @@ public class GameManager
         return session;
     }
 
-    public bool JoinGame(string gameId, string playerConnectionId)
+    public bool JoinGame(string gameId, string playerConnectionId, string userId)
     {
         if (_games.TryGetValue(gameId, out var session))
         {
-            if (string.IsNullOrEmpty(session.BlackPlayerId))
+            // Reconnect logic
+            if (session.WhiteUserId == userId)
+            {
+                session.WhitePlayerId = playerConnectionId; 
+                return true;
+            }
+            if (session.BlackUserId == userId)
+            {
+                session.BlackPlayerId = playerConnectionId; 
+                return true;
+            }
+
+            // New Join Logic (as Black) - Should simpler logic exist here if created via matching?
+            if (string.IsNullOrEmpty(session.BlackPlayerId) && string.IsNullOrEmpty(session.BlackUserId))
             {
                 session.BlackPlayerId = playerConnectionId;
+                session.BlackUserId = userId;
                 return true;
             }
         }
@@ -91,9 +101,6 @@ public class GameManager
     {
         if (_games.TryGetValue(gameId, out var session))
         {
-            // Parse and apply move using Rudzoft (simplified for now)
-            // In a real app, we'd need robust move validation here matching the client side
-            // For this MVP, we'll trust the client sends valid moves or handle exceptions
             try 
             {
                 var from = new Square(moveString.Substring(0, 2));
@@ -104,6 +111,31 @@ public class GameManager
                 
                 if (!move.Move.Equals(default(Move)))
                 {
+                    // Calculate and deduct time
+                    var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                    var elapsed = now - session.LastMoveTimestamp;
+                    
+                    // Whose turn WAS it? (Who just made the move)
+                    // If SideToMove IS White, it means White hasn't moved yet? No, updates happen after MakeMove usually.
+                    // Rudzoft MakeMove updates the state. So we check BEFORE the move.
+                    
+                    bool isWhiteMove = session.Game.Pos.SideToMove.IsWhite;
+                    
+                    if (isWhiteMove)
+                    {
+                        session.WhiteTimeRemainingMs -= elapsed;
+                        if (session.WhiteTimeRemainingMs < 0) return false; // Timeout? Handle properly (flag fall)
+                        session.WhiteTimeRemainingMs += session.IncrementMs;
+                    }
+                    else
+                    {
+                        session.BlackTimeRemainingMs -= elapsed;
+                        if (session.BlackTimeRemainingMs < 0) return false; 
+                        session.BlackTimeRemainingMs += session.IncrementMs;
+                    }
+                    
+                    session.LastMoveTimestamp = now;
+
                     session.Game.Pos.MakeMove(move.Move, session.Game.Pos.State);
                     return true;
                 }
@@ -135,6 +167,15 @@ public class GameSession
     public string GameId { get; set; } = "";
     public string HostConnectionId { get; set; } = "";
     public string WhitePlayerId { get; set; } = "";
+    public string WhiteUserId { get; set; } = "";
     public string? BlackPlayerId { get; set; }
+    public string? BlackUserId { get; set; }
     public IGame Game { get; set; } = default!;
+    
+    // Time Control
+    public string TimeControl { get; set; } = "10+0";
+    public long WhiteTimeRemainingMs { get; set; }
+    public long BlackTimeRemainingMs { get; set; }
+    public long IncrementMs { get; set; }
+    public long LastMoveTimestamp { get; set; }
 }
