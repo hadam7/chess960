@@ -1595,10 +1595,6 @@ h1,
   cursor: wait;
 }
 
-.cursor-not-allowed{
-  cursor: not-allowed;
-}
-
 .select-none{
   -webkit-user-select: none;
      -moz-user-select: none;
@@ -2473,14 +2469,6 @@ h1,
 
 .opacity-90{
   opacity: 0.9;
-}
-
-.opacity-50{
-  opacity: 0.5;
-}
-
-.opacity-60{
-  opacity: 0.6;
 }
 
 .mix-blend-overlay{
