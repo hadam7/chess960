@@ -1,11 +1,12 @@
 @page "/play-bot"
 @using Chess960.Web.Client.Services
-@using Chess960.Web.Components
+
 @using Chess960.Web.Client.Components
 @inject ChessGameService GameService
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
-@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Web
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 
 <PageTitle>Play vs Bot - Chess960</PageTitle>
 
@@ -79,34 +80,76 @@
                 }
             </div>
         </div>
+        
+        <!-- Debug Console -->
+        <div class="lg:col-span-3">
+             <div class="glass-panel p-4 bg-black/80 font-mono text-xs text-green-400 h-32 overflow-y-auto">
+                <div class="font-bold border-b border-white/20 mb-2">DEBUG CONSOLE</div>
+                @foreach(var log in debugLogs)
+                {
+                    <div>@log</div>
+                }
+             </div>
+        </div>
     </div>
 </div>
 
 @code {
     private int skillLevel = 5;
     private bool isBotThinking = false;
+    private List<string> debugLogs = new();
     private DotNetObjectReference<PlayVsBot>? dotNetHelper;
+    private IJSObjectReference? module;
+
+    private void Log(string message)
+    {
+        debugLogs.Add($"{DateTime.Now:HH:mm:ss} - {message}");
+        StateHasChanged();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            dotNetHelper = DotNetObjectReference.Create(this);
-            // Load the script globally
-            await JSRuntime.InvokeVoidAsync("import", "/js/stockfish-interop.js");
-            await JSRuntime.InvokeVoidAsync("stockfishInterop.init", dotNetHelper);
-            
-            GameService.OnStateChanged += OnGameStateChanged;
-            StartNewGame();
+            try 
+            {
+                Log("Initializing...");
+                dotNetHelper = DotNetObjectReference.Create(this);
+                // Load the script as a module
+                Log("Importing module...");
+                module = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/js/stockfish-interop.js");
+                Log("Module imported. Calling init...");
+                await module.InvokeVoidAsync("init", dotNetHelper);
+                Log("Init success.");
+                
+                GameService.OnStateChanged += OnGameStateChanged;
+                StartNewGame();
+            }
+            catch (Exception ex)
+            {
+                Log($"Error during init: {ex.Message}");
+            }
         }
     }
 
-    private void StartNewGame()
+    private async void StartNewGame()
     {
-        GameService.StartNewGame(true);
-        // Reset bot
-        JSRuntime.InvokeVoidAsync("stockfishInterop.startNewGame", skillLevel);
-        isBotThinking = false;
+        try
+        {
+            Log("Starting new game...");
+            GameService.StartNewGame(true);
+            // Reset bot
+            if (module != null)
+            {
+                await module.InvokeVoidAsync("startNewGame", skillLevel);
+                Log("Bot reset.");
+            }
+            isBotThinking = false;
+        }
+        catch (Exception ex)
+        {
+            Log($"Error starting game: {ex.Message}");
+        }
     }
 
     private void OnGameStateChanged()
@@ -115,15 +158,28 @@
         if (!GameService.Game.Pos.SideToMove.IsWhite && !GameService.IsMate && !GameService.IsStalemate)
         {
             isBotThinking = true;
+            Log("Bot's turn. Thinking...");
             StateHasChanged();
             
             // Small delay to let UI update
             Task.Delay(500).ContinueWith(async _ =>
             {
-                var fen = GameService.GetFen();
-                // Depth depends on skill level roughly, or fixed. Let's use 10 for now or scale it.
-                int depth = Math.Max(1, skillLevel / 2 + 5); 
-                await JSRuntime.InvokeVoidAsync("stockfishInterop.requestMove", fen, depth);
+                try
+                {
+                    var fen = GameService.GetFen();
+                    // Depth depends on skill level roughly, or fixed.
+                    int depth = Math.Max(1, skillLevel / 2 + 5); 
+                    
+                    if (module != null)
+                    {
+                        Log($"Requesting move for FEN: {fen} Depth: {depth}");
+                        await module.InvokeVoidAsync("requestMove", fen, depth);
+                    }
+                }
+                catch (Exception ex)
+                {
+                   _ = InvokeAsync(() => Log($"Error requesting move: {ex.Message}"));
+                }
             });
         }
     }
@@ -131,6 +187,7 @@
     [JSInvokable]
     public void OnBestMove(string moveString)
     {
+        Log($"Bot returned move: {moveString}");
         // moveString is like "e2e4" or "e7e8q"
         if (string.IsNullOrEmpty(moveString)) return;
 
@@ -142,13 +199,16 @@
         StateHasChanged();
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         GameService.OnStateChanged -= OnGameStateChanged;
         if (dotNetHelper != null)
         {
             dotNetHelper.Dispose();
         }
-        return ValueTask.CompletedTask;
+        if (module != null)
+        {
+            await module.DisposeAsync();
+        }
     }
 }

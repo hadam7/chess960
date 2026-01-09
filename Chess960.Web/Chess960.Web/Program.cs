@@ -74,6 +74,13 @@ app.UseHttpsRedirection();
 
 app.UseAntiforgery();
 
+// app.Use(async (context, next) =>
+// {
+//     context.Response.Headers.Append("Cross-Origin-Opener-Policy", "same-origin");
+//     context.Response.Headers.Append("Cross-Origin-Embedder-Policy", "require-corp");
+//     await next();
+// });
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode()
