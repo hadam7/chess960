@@ -1228,6 +1228,10 @@ h1,
   margin-bottom: 2rem;
 }
 
+.mb-auto{
+  margin-bottom: auto;
+}
+
 .ml-2{
   margin-left: 0.5rem;
 }
@@ -1266,10 +1270,6 @@ h1,
 
 .mt-8{
   margin-top: 2rem;
-}
-
-.mb-auto{
-  margin-bottom: auto;
 }
 
 .block{
@@ -1585,10 +1585,6 @@ h1,
 
 .animate-spin{
   animation: spin 1s linear infinite;
-}
-
-.cursor-not-allowed{
-  cursor: not-allowed;
 }
 
 .cursor-pointer{
@@ -1937,6 +1933,11 @@ h1,
   background-color: rgb(var(--color-accent) / 0.2);
 }
 
+.bg-theme-glow{
+  --tw-bg-opacity: 1;
+  background-color: rgb(var(--color-glow) / var(--tw-bg-opacity, 1));
+}
+
 .bg-theme-glow\/10{
   background-color: rgb(var(--color-glow) / 0.1);
 }
@@ -1960,11 +1961,6 @@ h1,
 
 .bg-white\/5{
   background-color: rgb(255 255 255 / 0.05);
-}
-
-.bg-theme-glow{
-  --tw-bg-opacity: 1;
-  background-color: rgb(var(--color-glow) / var(--tw-bg-opacity, 1));
 }
 
 .bg-\[radial-gradient\(circle_at_50\%_0\%\2c rgba\(0\2c 255\2c 157\2c 0\.2\)\2c transparent\)\]{
@@ -2457,14 +2453,6 @@ h1,
 
 .opacity-5{
   opacity: 0.05;
-}
-
-.opacity-50{
-  opacity: 0.5;
-}
-
-.opacity-60{
-  opacity: 0.6;
 }
 
 .opacity-70{
