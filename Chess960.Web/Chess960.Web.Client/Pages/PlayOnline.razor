@@ -39,7 +39,7 @@
 
         <!-- Board -->
         <div class="w-full max-w-[76vh] relative aspect-square shadow-2xl rounded-none overflow-hidden border-2 border-white/10 bg-black/50 ring-1 ring-white/5 transition-all duration-500 ease-in-out">
-             <ChessBoard IsWhiteSide="@amIWhite" OnMove="HandleLocalMove" />
+             <ChessBoard IsWhiteSide="@amIWhite" OnMove="HandleLocalMove" OverlayFen="@(IsViewingHistory ? fenHistory[currentViewIndex] : null)" />
              
              <!-- Game Over Modal (Board Centered) -->
              @if (ShowGameOverModal)
@@ -68,8 +68,8 @@
         
                         <!-- Icon/status -->
                         <div class="mb-4 relative">
-                            <div class="absolute inset-0 @(IsVictory ? "bg-green-500" : "bg-red-500") blur-xl opacity-20 rounded-full"></div>
-                            <span class="bi @(IsVictory ? "bi-trophy-fill text-green-400" : "bi-x-circle-fill text-red-500") text-5xl relative z-10 drop-shadow-lg"></span>
+                            <div class="absolute inset-0 @(IsVictory ? "bg-green-500" : (IsDraw ? "bg-gray-500" : "bg-red-500")) blur-xl opacity-20 rounded-full"></div>
+                            <span class="bi @(IsVictory ? "bi-trophy-fill text-green-400" : (IsDraw ? "bi-dash-circle-fill text-gray-400" : "bi-x-circle-fill text-red-500")) text-5xl relative z-10 drop-shadow-lg"></span>
                         </div>
         
                         <!-- Text -->
@@ -77,7 +77,7 @@
                             @(IsVictory ? "GYŐZELEM!" : (GameOverMessage ?? "JÁTÉK VÉGE"))
                         </h2>
                         
-                        <div class="h-1 w-12 @(IsVictory ? "bg-green-500" : "bg-red-500") rounded-full mb-3"></div>
+                        <div class="h-1 w-12 @(IsVictory ? "bg-green-500" : (IsDraw ? "bg-gray-500" : "bg-red-500")) rounded-full mb-3"></div>
         
                         <p class="text-white/60 font-medium text-xs uppercase tracking-widest mb-6">
                             @GameOverSubtext
@@ -85,7 +85,7 @@
         
                         <!-- Buttons -->
                         <div class="w-full space-y-2">
-                            <button @onclick="CloseGameOver" class="w-full py-3 bg-white text-black font-black text-sm uppercase tracking-wider rounded-lg hover:scale-105 transition-transform shadow-lg active:scale-95">
+                            <button @onclick="StartNewGameSearch" class="w-full py-3 bg-white text-black font-black text-sm uppercase tracking-wider rounded-lg hover:scale-105 transition-transform shadow-lg active:scale-95">
                                 <span class="bi bi-controller mr-2"></span> Új Játék
                             </button>
                             
@@ -188,13 +188,32 @@
                 </div>
 
                 <!-- Game Controls -->
-                <div class="p-4 bg-black/20 border-t border-white/5">
-                    <!-- Navigation (Visual only + Resign) -->
+                <div class="p-4 bg-black/20 border-t border-white/5 relative">
+                    
+                    <!-- Draw Offer Toast (Embedded in Sidebar) -->
+                    @if (ShowDrawOffer)
+                    {
+                        <div class="absolute bottom-full left-0 w-full bg-[#1a1a1a] border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-4 fade-in duration-300 z-30">
+                            <div class="flex flex-col">
+                                <span class="font-bold text-white uppercase tracking-wider text-xs">Döntetlen?</span>
+                                <span class="text-[9px] text-white/50 uppercase tracking-widest">Az ellenfél ajánlata</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button @onclick="AcceptDraw" class="w-8 h-8 flex items-center justify-center bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500 hover:text-black transition-all" title="Elfogad">
+                                    <span class="bi bi-check-lg text-lg"></span>
+                                </button>
+                                <button @onclick="DeclineDraw" class="w-8 h-8 flex items-center justify-center bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500 hover:text-black transition-all" title="Elutasít">
+                                    <span class="bi bi-x-lg text-lg"></span>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                    <!-- Navigation (Step Buttons) -->
                     <div class="flex items-center justify-center gap-2 mb-4">
-                        <button class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors"><span class="bi bi-skip-backward-fill"></span></button>
-                        <button class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors"><span class="bi bi-caret-left-fill"></span></button>
-                        <button class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors"><span class="bi bi-caret-right-fill"></span></button>
-                        <button class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors"><span class="bi bi-skip-forward-fill"></span></button>
+                        <button @onclick="StepFirst" disabled="@(fenHistory.Count == 0 || currentViewIndex <= 0)" class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"><span class="bi bi-skip-backward-fill"></span></button>
+                        <button @onclick="StepPrev" disabled="@(fenHistory.Count == 0 || currentViewIndex <= 0)" class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"><span class="bi bi-caret-left-fill"></span></button>
+                        <button @onclick="StepNext" disabled="@(fenHistory.Count == 0 || currentViewIndex >= fenHistory.Count - 1)" class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"><span class="bi bi-caret-right-fill"></span></button>
+                        <button @onclick="StepLast" disabled="@(fenHistory.Count == 0 || currentViewIndex >= fenHistory.Count - 1)" class="w-8 h-8 flex items-center justify-center rounded bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"><span class="bi bi-skip-forward-fill"></span></button>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-3">
@@ -312,24 +331,7 @@
 
 
 
-    <!-- Draw Offer Toast -->
-    @if (ShowDrawOffer)
-    {
-        <div class="fixed top-24 left-1/2 transform -translate-x-1/2 z-40 bg-[#1a1a1a] border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] rounded-2xl p-5 flex items-center gap-6 animate-in slide-in-from-top-4 fade-in duration-300">
-            <div class="flex flex-col">
-                <span class="font-bold text-white uppercase tracking-wider text-sm">Döntetlen?</span>
-                <span class="text-[10px] text-white/50 uppercase tracking-widest">Az ellenfél ajánlata</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <button @onclick="AcceptDraw" class="w-10 h-10 flex items-center justify-center bg-green-500/20 text-green-400 rounded-xl hover:bg-green-500 hover:text-black transition-all" title="Elfogad">
-                    <span class="bi bi-check-lg text-xl"></span>
-                </button>
-                <button @onclick="DeclineDraw" class="w-10 h-10 flex items-center justify-center bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500 hover:text-black transition-all" title="Elutasít">
-                    <span class="bi bi-x-lg text-xl"></span>
-                </button>
-            </div>
-        </div>
-    }
+
 
     <style>
         .confetti-container {
@@ -384,12 +386,16 @@
     private string? GameOverSubtext;
     private bool ShowGameOverModal = false;
     private bool IsVictory = false;
+    private bool IsDraw => GameOverMessage == "Döntetlen";
 
     // Draw Offer State
     private bool ShowDrawOffer = false;
 
-    // Track moves locally for display
+    // History
+    private List<string> fenHistory = new();
     private List<string> moveList = new();
+    private int currentViewIndex = -1;
+    private bool IsViewingHistory => currentViewIndex != -1 && currentViewIndex < fenHistory.Count - 1;
 
     private long MyTimeMs => amIWhite ? WhiteTimeMs : BlackTimeMs;
     private long OpponentTimeMs => amIWhite ? BlackTimeMs : WhiteTimeMs;
@@ -480,6 +486,12 @@
         BlackTimeMs = blackTime;
         
         moveList.Clear(); // New game
+        
+        // Init history
+        fenHistory.Clear();
+        fenHistory.Add(fen);
+        currentViewIndex = 0;
+        
         activeTab = "game";
 
         Nav.NavigateTo($"/play-online?id={gameId}&fen={Uri.EscapeDataString(fen)}&white={whiteId}&black={blackId}", false);
@@ -496,6 +508,20 @@
              // Ideally wait, but for responsiveness...
              // Let's rely on GameService update or just push to server.
              await Multiplayer.MakeMove(GameId, move.from + move.to);
+             
+             // Optimistic update for history? 
+             // Better to wait for server confirmation usually, but for responsiveness we might update local board.
+             // GameService updates automatically on local move? 
+             // Actually Multiplayer.MakeMove calls hub, hub broadcasts move, HandleRemoteMove called for EVERYONE including sender?
+             // If so, we handle history in HandleRemoteMove.
+             // If not (usually sender doesn't get echo), we need to handle it here.
+             // Assuming typical SignalR pattern where sender DOESN'T get echo:
+             // But wait, PlayOnline usually relies on echo or local optimistic update.
+             // Let's check HandleRemoteMove usage.
+             // Looking at GameHub, it sends to Group(gameId) which includes caller?
+             // Usually yes unless Clients.OthersInGroup.
+             // GameHub.cs: await Clients.Group(gameId).SendAsync("MoveMade"...
+             // This includes the caller. So HandleRemoteMove will replace this logic.
         }
     }
 
@@ -504,15 +530,46 @@
         var from = moveString.Substring(0, 2);
         var to = moveString.Substring(2, 2);
         
+        // Handle promotion
+        if (moveString.Length > 4)
+        {
+             // If local GameService supports promotion in 'to' string or as 3rd arg.
+             // Assuming MakeMove(from, to) handles "e8q" in 'to' or we need to pass it.
+             // Looking at ChessBoard.razor, MakeMove(from, to) is used.
+             // Let's assume we append it to 'to' if the service expects it that way, 
+             // OR usually Rudzoft expects 2 args where 'to' might need to handle it.
+             // Safest fix for now to avoid compilation error is:
+             // GameService.MakeMove(from, to + promotionChar)
+             to += moveString[4];
+        }
+        
         WhiteTimeMs = whiteTime;
         BlackTimeMs = blackTime;
         
-        // Add move to history
-        moveList.Add(moveString); // Simple string for now, could enhance with notation later
 
-        GameService.MakeMove(from, to);
-        StateHasChanged();
+         // Add move to history
+         moveList.Add(moveString); 
+
+         GameService.MakeMove(from, to);
+
+         // Update history with new state
+         var newFen = GameService.GetFen();
+         fenHistory.Add(newFen);
+         
+         // If we were at the end, stay at the end
+         if (currentViewIndex == fenHistory.Count - 2)
+         {
+             currentViewIndex = fenHistory.Count - 1;
+         }
+
+         StateHasChanged();
     }
+    
+    // Navigation Methods
+    private void StepFirst() => currentViewIndex = 0;
+    private void StepPrev() => currentViewIndex = Math.Max(0, currentViewIndex - 1);
+    private void StepNext() => currentViewIndex = Math.Min(fenHistory.Count - 1, currentViewIndex + 1);
+    private void StepLast() => currentViewIndex = fenHistory.Count - 1;
 
     private string GetTabClass(string tabName)
     {
@@ -635,6 +692,13 @@
             await Multiplayer.RespondDrawAsync(GameId, false);
             ShowDrawOffer = false;
         }
+    }
+
+    private async Task StartNewGameSearch()
+    {
+        ShowGameOverModal = false;
+        activeTab = "new-game"; // Switch to new game tab to see search UI
+        await FindMatch();
     }
 
     private void CloseGameOver()

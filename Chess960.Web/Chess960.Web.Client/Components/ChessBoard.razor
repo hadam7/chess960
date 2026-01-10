@@ -62,12 +62,7 @@
         </div>
     </div>
     
-    @* Removed CHECK indicator *@
-    {
-        <div class="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded-full font-bold shadow-lg animate-pulse z-10">
-            CHECK!
-        </div>
-    }
+
 </div>
 
 @code {
@@ -87,9 +82,14 @@
         GameService.OnStateChanged -= StateHasChanged;
     }
 
+    [Parameter] public string? OverlayFen { get; set; }
+
+    // ... existing parameters ...
+
     private char GetPieceAt(int file, int rank)
     {
-        var fen = GameService.GetFen();
+        // Use OverlayFen if provided, otherwise live game FEN
+        var fen = !string.IsNullOrEmpty(OverlayFen) ? OverlayFen : GameService.GetFen();
         if (string.IsNullOrEmpty(fen)) return ' ';
 
         var parts = fen.Split(' ');
@@ -114,9 +114,13 @@
         }
         return ' ';
     }
-
+    
     private async Task HandleSquareClick(int file, int rank)
     {
+        // Disable interaction if viewing history
+        if (!string.IsNullOrEmpty(OverlayFen)) return;
+        
+        // ... existing logic ...
         // If it's not my turn or not my piece (if side is specified), ignore
         if (IsWhiteSide.HasValue)
         {
