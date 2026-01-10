@@ -27,7 +27,7 @@
                     </div>
                     <div class="flex flex-col leading-none justify-center">
                         <span class="font-bold text-[10px] tracking-wide text-white/90">@OpponentName</span>
-                        <span class="text-[9px] text-theme-muted font-mono">1500</span>
+                        <span class="text-[9px] text-theme-muted font-mono">@(amIWhite ? BlackRating : WhiteRating)</span>
                     </div>
                 </div>
                 <!-- Dead Pieces (Placeholder) -->
@@ -84,6 +84,20 @@
                         <p class="text-white/60 font-medium text-xs uppercase tracking-widest mb-6">
                             @GameOverSubtext
                         </p>
+
+                        <!-- Rating Change -->
+                        @if (NewRating.HasValue && RatingChange.HasValue)
+                        {
+                            <div class="mb-6 flex flex-col items-center animate-in slide-in-from-bottom-2 delay-100 duration-500">
+                                <div class="text-4xl font-extrabold text-white tracking-widest drop-shadow-lg">
+                                    @NewRating
+                                </div>
+                                <div class="text-xs font-bold uppercase tracking-widest flex items-center gap-1 @(RatingChange >= 0 ? "text-green-400" : "text-red-400")">
+                                    @(RatingChange >= 0 ? "+" : "")@RatingChange
+                                    <span class="bi @(RatingChange >= 0 ? "bi-graph-up-arrow" : "bi-graph-down-arrow")"></span>
+                                </div>
+                            </div>
+                        }
         
                         <!-- Buttons -->
                         <div class="w-full space-y-2">
@@ -110,7 +124,7 @@
                     </div>
                     <div class="flex flex-col leading-none justify-center">
                         <span class="font-bold text-[10px] tracking-wide text-white/90">@CurrentUserName</span>
-                        <span class="text-[9px] text-theme-muted font-mono">1500</span>
+                        <span class="text-[9px] text-theme-muted font-mono">@(amIWhite ? WhiteRating : BlackRating)</span>
                     </div>
                 </div>
                  <!-- Dead Pieces (Placeholder) -->
@@ -378,7 +392,10 @@
     private string activeTab = "new-game";
     private string selectedTimeControl = "3+2"; 
     private string CurrentUserName = "You";
-    private string OpponentName = "Opponent"; 
+    private string? OpponentName;
+    private int WhiteRating = 1200;
+    private int BlackRating = 1200;
+    private long MyTimeMs => amIWhite ? WhiteTimeMs : BlackTimeMs; 
     
     // Time State
     private long WhiteTimeMs { get; set; }
@@ -390,7 +407,23 @@
     private string? GameOverSubtext;
     private bool ShowGameOverModal = false;
     private bool IsVictory = false;
-    private bool IsDraw => GameOverMessage == "Döntetlen";
+    private bool IsDraw = false;
+
+    // ...
+
+    public ValueTask DisposeAsync()
+    {
+        Multiplayer.OnWaitingForMatch -= HandleWaiting;
+        Multiplayer.OnGameStarted -= HandleGameStarted;
+        Multiplayer.OnMoveMade -= HandleRemoteMove;
+        Multiplayer.OnGameOver -= HandleGameOver;
+        Multiplayer.OnDrawOffered -= HandleDrawOffered;
+        Multiplayer.OnDrawDeclined -= HandleDrawDeclined;
+        
+        return ValueTask.CompletedTask;
+    }
+    private int? NewRating;
+    private int? RatingChange;
 
     // Draw Offer State
     private bool ShowDrawOffer = false;
@@ -401,7 +434,6 @@
     private int currentViewIndex = -1;
     private bool IsViewingHistory => currentViewIndex != -1 && currentViewIndex < fenHistory.Count - 1;
 
-    private long MyTimeMs => amIWhite ? WhiteTimeMs : BlackTimeMs;
     private long OpponentTimeMs => amIWhite ? BlackTimeMs : WhiteTimeMs;
     private bool IsMyTurn => GameService.Game != null && amIWhite == GameService.Game.Pos.SideToMove.IsWhite;
     private bool IsOpponentTurn => GameService.Game != null && amIWhite != GameService.Game.Pos.SideToMove.IsWhite;
@@ -489,18 +521,33 @@
         StateHasChanged();
     }
 
-    private void HandleGameStarted(string gameId, string fen, string whiteId, string blackId, long whiteTime, long blackTime)
+    private void HandleGameStarted(string gameId, string fen, string whiteId, string blackId, long whiteTime, long blackTime, int wRating, int bRating)
     {
+        // Cancel/Close any search UI
         isSearching = false;
-        GameId = gameId;
-        Fen = fen;
+        
+        GameId = gameId; // Set GameId for local use
+        
+        // Setup Players
         White = whiteId;
         Black = blackId;
+        
+        // Set Ratings
+        WhiteRating = wRating;
+        BlackRating = bRating;
+        
+        // IMPORTANT: Set Multiplayer.UserId if not set (from Auth context logic above)
+        // Check game status (Determine colors)
+        CheckGameStatus();
+
+        // Start Game
+        GameService.StartGameFromFen(fen);
+        
+        // Sync Time
         WhiteTimeMs = whiteTime;
         BlackTimeMs = blackTime;
-
+        
         // Determine Opponent Name
-        // whiteId and blackId are effectively the UserNames now
         if (Multiplayer.UserId == whiteId)
         {
              OpponentName = blackId;
@@ -623,7 +670,7 @@
     // FormatTime removed
 
 
-    private void HandleGameOver(string winnerId, string reason, string fen)
+    private void HandleGameOver(string winnerId, string reason, string fen, int? wRating, int? bRating, int? wDelta, int? bDelta)
     {
           // if (clockTimer != null) clockTimer.Dispose(); // Stop timer -- handled by IsRunning props
           ShowGameOverModal = true;
@@ -631,15 +678,29 @@
          // Update board one last time to show final position (e.g. mate)
          GameService.StartGameFromFen(fen);
 
+         // Set Rating info
+         if (amIWhite)
+         {
+             NewRating = wRating;
+             RatingChange = wDelta;
+         }
+         else
+         {
+             NewRating = bRating;
+             RatingChange = bDelta;
+         }
+
          if (string.IsNullOrEmpty(winnerId))
          {
              // Draw
-             IsVictory = false; // Neutral
+             IsVictory = false;
+             IsDraw = true;
              GameOverMessage = "Döntetlen";
              GameOverSubtext = ReasonToHungarian(reason);
          }
          else
          {
+             IsDraw = false;
              if (winnerId == Multiplayer.UserId)
              {
                  IsVictory = true;
@@ -732,15 +793,5 @@
         // Nav.NavigateTo("/");  -- User wants to stay on the game page
     }
 
-    public async ValueTask DisposeAsync()
-    {
 
-        
-        Multiplayer.OnWaitingForMatch -= HandleWaiting;
-        Multiplayer.OnGameStarted -= HandleGameStarted;
-        Multiplayer.OnMoveMade -= HandleRemoteMove;
-        Multiplayer.OnGameOver -= HandleGameOver;
-        Multiplayer.OnDrawOffered -= HandleDrawOffered;
-        Multiplayer.OnDrawDeclined -= HandleDrawDeclined;
-    }
 }

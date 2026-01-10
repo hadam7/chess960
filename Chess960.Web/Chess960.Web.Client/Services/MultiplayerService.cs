@@ -8,10 +8,10 @@ public class MultiplayerService : IAsyncDisposable
     private HubConnection? _hubConnection;
     private readonly NavigationManager _navigationManager;
 
-    public event Action<string, string, string, string, long, long>? OnGameStarted;
+    public event Action<string, string, string, string, long, long, int, int>? OnGameStarted; // ..., whiteRating, blackRating
     public event Action<string, string, long, long>? OnMoveMade;
     public event Action? OnWaitingForMatch;
-    public event Action<string, string, string>? OnGameOver; // winnerId, reason, fen
+    public event Action<string, string, string, int?, int?, int?, int?>? OnGameOver; // winnerId, reason, fen, wRating, bRating, wLow, bLow
     public event Action<string>? OnDrawOffered; // senderId
     public event Action? OnDrawDeclined;
 
@@ -33,10 +33,10 @@ public class MultiplayerService : IAsyncDisposable
             .WithAutomaticReconnect()
             .Build();
 
-        _hubConnection.On<string, string, string, string, long, long>("GameStarted", (gameId, fen, whiteId, blackId, whiteTime, blackTime) =>
+        _hubConnection.On<string, string, string, string, long, long, int, int>("GameStarted", (gameId, fen, whiteId, blackId, whiteTime, blackTime, wRating, bRating) =>
         {
             CurrentGameId = gameId;
-            OnGameStarted?.Invoke(gameId, fen, whiteId, blackId, whiteTime, blackTime);
+            OnGameStarted?.Invoke(gameId, fen, whiteId, blackId, whiteTime, blackTime, wRating, bRating);
         });
 
         _hubConnection.On<string, string, long, long>("MoveMade", (move, fen, whiteTime, blackTime) =>
@@ -49,9 +49,9 @@ public class MultiplayerService : IAsyncDisposable
             OnWaitingForMatch?.Invoke();
         });
 
-        _hubConnection.On<string, string, string>("GameOver", (winnerId, reason, fen) =>
+        _hubConnection.On<string, string, string, int?, int?, int?, int?>("GameOver", (winnerId, reason, fen, wNew, bNew, wDelta, bDelta) =>
         {
-             OnGameOver?.Invoke(winnerId, reason, fen);
+             OnGameOver?.Invoke(winnerId, reason, fen, wNew, bNew, wDelta, bDelta);
         });
 
         _hubConnection.On<string>("DrawOffered", (senderId) =>
@@ -95,7 +95,7 @@ public class MultiplayerService : IAsyncDisposable
     {
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("Resign", gameId);
+            await _hubConnection.SendAsync("Resign", gameId, UserId);
         }
     }
 
@@ -103,7 +103,7 @@ public class MultiplayerService : IAsyncDisposable
     {
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("OfferDraw", gameId);
+            await _hubConnection.SendAsync("OfferDraw", gameId, UserId);
         }
     }
 
@@ -111,7 +111,7 @@ public class MultiplayerService : IAsyncDisposable
     {
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("RespondDraw", gameId, accept);
+            await _hubConnection.SendAsync("RespondDraw", gameId, UserId, accept);
         }
     }
 

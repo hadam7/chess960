@@ -6,11 +6,15 @@ namespace Chess960.Web.Hubs;
 public class GameHub : Hub
 {
     private readonly GameManager _gameManager;
+    private readonly EloService _eloService;
 
-    public GameHub(GameManager gameManager)
+    public GameHub(GameManager gameManager, EloService eloService)
     {
         _gameManager = gameManager;
+        _eloService = eloService;
     }
+
+    // ... FindMatch and JoinGame unchanged ...
 
     public async Task FindMatch(string userId, string timeControl)
     {
@@ -23,6 +27,8 @@ public class GameHub : Hub
             await Groups.AddToGroupAsync(session.WhitePlayerId, session.GameId);
             await Groups.AddToGroupAsync(session.BlackPlayerId!, session.GameId);
             
+            var (whiteRating, blackRating) = await _eloService.GetRatingsAsync(session.WhiteUserId, session.BlackUserId);
+
             // Notify both players
             await Clients.Group(session.GameId).SendAsync("GameStarted", 
                 session.GameId, 
@@ -30,11 +36,13 @@ public class GameHub : Hub
                 session.WhiteUserId, 
                 session.BlackUserId,
                 session.WhiteTimeRemainingMs,
-                session.BlackTimeRemainingMs);
+                session.BlackTimeRemainingMs,
+                whiteRating,
+                blackRating);
         }
         else
         {
-            Console.WriteLine($"[Hub] Added to queue: {userId}");
+             Console.WriteLine($"[Hub] Added to queue: {userId}");
             // Added to queue
             await Clients.Caller.SendAsync("WaitingForMatch");
         }
@@ -51,15 +59,18 @@ public class GameHub : Hub
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
             var session = _gameManager.GetGame(gameId);
             
+            var (whiteRating, blackRating) = await _eloService.GetRatingsAsync(session.WhiteUserId, session.BlackUserId);
+
             // Notify both players that game started (or person reconnected)
-            // Fix: Send only to caller to avoid infinite loop where opponent reloads -> joins -> triggers reload for me -> I join -> trigger reload for them...
             await Clients.Caller.SendAsync("GameStarted", 
                 session?.GameId, 
                 session?.Game.Pos.FenNotation, 
                 session?.WhiteUserId, 
                 session?.BlackUserId,
                 session?.WhiteTimeRemainingMs,
-                session?.BlackTimeRemainingMs);
+                session?.BlackTimeRemainingMs,
+                whiteRating,
+                blackRating);
             return true;
         }
         return false;
@@ -95,10 +106,7 @@ public class GameHub : Hub
                     // Check if game ended via this move
                     if (session.Result != GameResult.Active)
                     {
-                        await Clients.Group(gameId).SendAsync("GameOver", 
-                            session.WinnerUserId, 
-                            session.EndReason.ToString(), 
-                            session.Game.Pos.FenNotation);
+                        await HandleGameOver(session);
                     }
                 }
                 else 
@@ -117,33 +125,24 @@ public class GameHub : Hub
         }
     }
 
-    public async Task Resign(string gameId)
+    public async Task Resign(string gameId, string userId)
     {
          var session = _gameManager.GetGame(gameId);
          if (session == null) return;
          
-         var userId = session.WhitePlayerId == Context.ConnectionId ? session.WhiteUserId : session.BlackUserId;
-         if (userId == null) return;
-
-         // Try to resign
+         // Try to resign using actual UserId
          var endedSession = _gameManager.Resign(gameId, userId);
          
          if (endedSession != null)
          {
-             await Clients.Group(gameId).SendAsync("GameOver", 
-                 endedSession.WinnerUserId, 
-                 endedSession.EndReason.ToString(), 
-                 endedSession.Game.Pos.FenNotation);
+             await HandleGameOver(endedSession);
          }
     }
 
-    public async Task OfferDraw(string gameId)
+    public async Task OfferDraw(string gameId, string userId)
     {
         var session = _gameManager.GetGame(gameId);
         if (session == null) return;
-        
-        var userId = session.WhitePlayerId == Context.ConnectionId ? session.WhiteUserId : session.BlackUserId;
-        if (userId == null) return;
 
         if (_gameManager.OfferDraw(gameId, userId))
         {
@@ -151,28 +150,34 @@ public class GameHub : Hub
         }
     }
 
-    public async Task RespondDraw(string gameId, bool accept)
+    public async Task RespondDraw(string gameId, string userId, bool accept)
     {
         var session = _gameManager.GetGame(gameId);
         if (session == null) return;
-        
-        var userId = session.WhitePlayerId == Context.ConnectionId ? session.WhiteUserId : session.BlackUserId;
-        if (userId == null) return;
 
         var endedSession = _gameManager.RespondDraw(gameId, userId, accept);
         
         if (endedSession != null)
         {
             // Draw Accepted -> Game Over
-             await Clients.Group(gameId).SendAsync("GameOver", 
-                 endedSession.WinnerUserId, 
-                 endedSession.EndReason.ToString(), 
-                 endedSession.Game.Pos.FenNotation);
+             await HandleGameOver(endedSession);
         }
         else if (!accept)
         {
             // Draw Declined
              await Clients.Group(gameId).SendAsync("DrawDeclined");
         }
+    }
+
+    private async Task HandleGameOver(GameSession session)
+    {
+        // Calculate ELO changes
+        var (wNew, bNew, wDelta, bDelta) = await _eloService.UpdateRatingsAsync(session.WhiteUserId, session.BlackUserId, session.Result);
+
+        await Clients.Group(session.GameId).SendAsync("GameOver", 
+             session.WinnerUserId, 
+             session.EndReason.ToString(), 
+             session.Game.Pos.FenNotation,
+             wNew, bNew, wDelta, bDelta);
     }
 }
