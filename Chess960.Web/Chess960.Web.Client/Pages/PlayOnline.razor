@@ -40,6 +40,62 @@
         <!-- Board -->
         <div class="w-full max-w-[76vh] relative aspect-square shadow-2xl rounded-none overflow-hidden border-2 border-white/10 bg-black/50 ring-1 ring-white/5 transition-all duration-500 ease-in-out">
              <ChessBoard IsWhiteSide="@amIWhite" OnMove="HandleLocalMove" />
+             
+             <!-- Game Over Modal (Board Centered) -->
+             @if (ShowGameOverModal)
+             {
+                 <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/60 animate-in fade-in duration-500">
+                    
+                    @if (IsVictory)
+                    {
+                        <!-- Confetti Container -->
+                        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+                            <div class="confetti-container">
+                                @for (int i = 0; i < 50; i++)
+                                {
+                                    <div class="confetti" style="--left: @(Random.Shared.Next(0, 100))%; --dur: @(Random.Shared.NextDouble() * 3 + 2)s; --delay: @(Random.Shared.NextDouble() * 2)s; --color: hsl(@(Random.Shared.Next(0, 360)), 100%, 50%);"></div>
+                                }
+                            </div>
+                        </div>
+                    }
+        
+                    <div class="relative bg-[#1a1a1a] w-3/4 max-w-sm rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-white/10 overflow-hidden transform scale-100 animate-in zoom-in-95 duration-300 flex flex-col items-center text-center p-6">
+                        
+                        <!-- Close Button -->
+                        <button @onclick="CloseGameOver" class="absolute top-3 right-3 text-white/30 hover:text-white transition-colors">
+                            <span class="bi bi-x-lg text-lg"></span>
+                        </button>
+        
+                        <!-- Icon/status -->
+                        <div class="mb-4 relative">
+                            <div class="absolute inset-0 @(IsVictory ? "bg-green-500" : "bg-red-500") blur-xl opacity-20 rounded-full"></div>
+                            <span class="bi @(IsVictory ? "bi-trophy-fill text-green-400" : "bi-x-circle-fill text-red-500") text-5xl relative z-10 drop-shadow-lg"></span>
+                        </div>
+        
+                        <!-- Text -->
+                        <h2 class="text-3xl font-black italic tracking-tighter mb-1 text-white uppercase drop-shadow-md">
+                            @(IsVictory ? "GYŐZELEM!" : (GameOverMessage ?? "JÁTÉK VÉGE"))
+                        </h2>
+                        
+                        <div class="h-1 w-12 @(IsVictory ? "bg-green-500" : "bg-red-500") rounded-full mb-3"></div>
+        
+                        <p class="text-white/60 font-medium text-xs uppercase tracking-widest mb-6">
+                            @GameOverSubtext
+                        </p>
+        
+                        <!-- Buttons -->
+                        <div class="w-full space-y-2">
+                            <button @onclick="CloseGameOver" class="w-full py-3 bg-white text-black font-black text-sm uppercase tracking-wider rounded-lg hover:scale-105 transition-transform shadow-lg active:scale-95">
+                                <span class="bi bi-controller mr-2"></span> Új Játék
+                            </button>
+                            
+                            <button @onclick="CloseGameOver" class="w-full py-2 bg-white/5 text-white/70 font-bold uppercase text-[10px] tracking-widest rounded-lg hover:bg-white/10 hover:text-white transition-colors">
+                                Elemzés
+                            </button>
+                        </div>
+                    </div>
+                </div>
+             }
         </div>
 
         <!-- Player Bar -->
@@ -142,10 +198,10 @@
                     </div>
                     
                     <div class="grid grid-cols-2 gap-3">
-                         <button class="bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors rounded text-xs py-2 flex items-center justify-center gap-2">
+                         <button @onclick="ResignGame" class="bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors rounded text-xs py-2 flex items-center justify-center gap-2">
                              <span class="bi bi-flag-fill"></span> Feladás
                          </button>
-                          <button class="bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors rounded text-xs py-2 flex items-center justify-center gap-2">
+                          <button @onclick="OfferDraw" class="bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors rounded text-xs py-2 flex items-center justify-center gap-2">
                              <span class="bi bi-circle-half"></span> Döntetlen
                          </button>
                     </div>
@@ -254,6 +310,52 @@
     }
 </style>
 
+
+
+    <!-- Draw Offer Toast -->
+    @if (ShowDrawOffer)
+    {
+        <div class="fixed top-24 left-1/2 transform -translate-x-1/2 z-40 bg-[#1a1a1a] border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] rounded-2xl p-5 flex items-center gap-6 animate-in slide-in-from-top-4 fade-in duration-300">
+            <div class="flex flex-col">
+                <span class="font-bold text-white uppercase tracking-wider text-sm">Döntetlen?</span>
+                <span class="text-[10px] text-white/50 uppercase tracking-widest">Az ellenfél ajánlata</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button @onclick="AcceptDraw" class="w-10 h-10 flex items-center justify-center bg-green-500/20 text-green-400 rounded-xl hover:bg-green-500 hover:text-black transition-all" title="Elfogad">
+                    <span class="bi bi-check-lg text-xl"></span>
+                </button>
+                <button @onclick="DeclineDraw" class="w-10 h-10 flex items-center justify-center bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500 hover:text-black transition-all" title="Elutasít">
+                    <span class="bi bi-x-lg text-xl"></span>
+                </button>
+            </div>
+        </div>
+    }
+
+    <style>
+        .confetti-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .confetti {
+            position: absolute;
+            width: 10px; // slightly smaller
+            height: 10px;
+            background-color: var(--color);
+            left: var(--left);
+            animation: fall var(--dur) linear infinite; /* Loop it */
+            animation-delay: var(--delay);
+            opacity: 0;
+            top: -10px;
+        }
+        @@keyframes fall {
+            0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+    </style>
+
 @code {
     [SupplyParameterFromQuery(Name = "id")]
     public string? GameId { get; set; }
@@ -277,6 +379,15 @@
     private long BlackTimeMs { get; set; }
     private Timer? clockTimer;
 
+    // Game End State
+    private string? GameOverMessage;
+    private string? GameOverSubtext;
+    private bool ShowGameOverModal = false;
+    private bool IsVictory = false;
+
+    // Draw Offer State
+    private bool ShowDrawOffer = false;
+
     // Track moves locally for display
     private List<string> moveList = new();
 
@@ -292,6 +403,9 @@
         Multiplayer.OnWaitingForMatch += HandleWaiting;
         Multiplayer.OnGameStarted += HandleGameStarted;
         Multiplayer.OnMoveMade += HandleRemoteMove;
+        Multiplayer.OnGameOver += HandleGameOver;
+        Multiplayer.OnDrawOffered += HandleDrawOffered;
+        Multiplayer.OnDrawDeclined += HandleDrawDeclined;
 
         if (!string.IsNullOrEmpty(GameId))
         {
@@ -427,6 +541,108 @@
         return span.ToString(@"mm\:ss");
     }
 
+    private void HandleGameOver(string winnerId, string reason, string fen)
+    {
+         if (clockTimer != null) clockTimer.Dispose(); // Stop timer
+         ShowGameOverModal = true;
+         
+         // Update board one last time to show final position (e.g. mate)
+         GameService.StartGameFromFen(fen);
+
+         if (string.IsNullOrEmpty(winnerId))
+         {
+             // Draw
+             IsVictory = false; // Neutral
+             GameOverMessage = "Döntetlen";
+             GameOverSubtext = ReasonToHungarian(reason);
+         }
+         else
+         {
+             if (winnerId == Multiplayer.UserId)
+             {
+                 IsVictory = true;
+                 GameOverMessage = "Győzelem!";
+                 GameOverSubtext = ReasonToHungarian(reason);
+             }
+             else
+             {
+                 IsVictory = false;
+                 GameOverMessage = "Vereség";
+                 GameOverSubtext = ReasonToHungarian(reason);
+             }
+         }
+         InvokeAsync(StateHasChanged);
+    }
+
+    private string ReasonToHungarian(string reason)
+    {
+        return reason switch
+        {
+            "Checkmate" => "Sakk-matt",
+            "Resignation" => "Az ellenfél feladta" + (IsVictory ? "" : " (Te feladtad)"),
+            "Timeout" => "Lejárt az idő",
+            "Stalemate" => "Patt",
+            "DrawAgreed" => "Megegyezés szerint",
+            _ => reason
+        };
+    }
+
+    private void HandleDrawOffered(string senderId)
+    {
+        if (senderId != Multiplayer.UserId)
+        {
+            ShowDrawOffer = true;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void HandleDrawDeclined()
+    {
+        // Ideally show a toast, for now just clear our offer state if we had any
+        ShowDrawOffer = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ResignGame()
+    {
+        if (!string.IsNullOrEmpty(GameId))
+        {
+            await Multiplayer.ResignAsync(GameId);
+        }
+    }
+
+    private async Task OfferDraw()
+    {
+        if (!string.IsNullOrEmpty(GameId))
+        {
+             await Multiplayer.OfferDrawAsync(GameId);
+        }
+    }
+    
+    private async Task AcceptDraw()
+    {
+        if (!string.IsNullOrEmpty(GameId))
+        {
+            await Multiplayer.RespondDrawAsync(GameId, true);
+            ShowDrawOffer = false;
+        }
+    }
+
+    private async Task DeclineDraw()
+    {
+         if (!string.IsNullOrEmpty(GameId))
+        {
+            await Multiplayer.RespondDrawAsync(GameId, false);
+            ShowDrawOffer = false;
+        }
+    }
+
+    private void CloseGameOver()
+    {
+        ShowGameOverModal = false;
+        // Nav.NavigateTo("/");  -- User wants to stay on the game page
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (clockTimer is not null) await clockTimer.DisposeAsync();
@@ -434,5 +650,8 @@
         Multiplayer.OnWaitingForMatch -= HandleWaiting;
         Multiplayer.OnGameStarted -= HandleGameStarted;
         Multiplayer.OnMoveMade -= HandleRemoteMove;
+        Multiplayer.OnGameOver -= HandleGameOver;
+        Multiplayer.OnDrawOffered -= HandleDrawOffered;
+        Multiplayer.OnDrawDeclined -= HandleDrawDeclined;
     }
 }

@@ -101,6 +101,8 @@ public class GameManager
     {
         if (_games.TryGetValue(gameId, out var session))
         {
+            if (session.Result != GameResult.Active) return false;
+
             try 
             {
                 var from = new Square(moveString.Substring(0, 2));
@@ -115,28 +117,52 @@ public class GameManager
                     var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                     var elapsed = now - session.LastMoveTimestamp;
                     
-                    // Whose turn WAS it? (Who just made the move)
-                    // If SideToMove IS White, it means White hasn't moved yet? No, updates happen after MakeMove usually.
-                    // Rudzoft MakeMove updates the state. So we check BEFORE the move.
-                    
                     bool isWhiteMove = session.Game.Pos.SideToMove.IsWhite;
                     
                     if (isWhiteMove)
                     {
                         session.WhiteTimeRemainingMs -= elapsed;
-                        if (session.WhiteTimeRemainingMs < 0) return false; // Timeout? Handle properly (flag fall)
+                        if (session.WhiteTimeRemainingMs < 0) 
+                        {
+                            EndGame(session, GameResult.BlackWon, GameEndReason.Timeout, session.BlackUserId);
+                            return false; 
+                        }
                         session.WhiteTimeRemainingMs += session.IncrementMs;
                     }
                     else
                     {
                         session.BlackTimeRemainingMs -= elapsed;
-                        if (session.BlackTimeRemainingMs < 0) return false; 
+                        if (session.BlackTimeRemainingMs < 0)
+                        {
+                            EndGame(session, GameResult.WhiteWon, GameEndReason.Timeout, session.WhiteUserId);
+                            return false;
+                        }
                         session.BlackTimeRemainingMs += session.IncrementMs;
                     }
                     
                     session.LastMoveTimestamp = now;
 
                     session.Game.Pos.MakeMove(move.Move, session.Game.Pos.State);
+
+                    // Check Game Over Conditions
+                    if (session.Game.Pos.IsMate)
+                    {
+                        var winnerId = isWhiteMove ? session.WhiteUserId : session.BlackUserId; // The one who moved mated the other
+                        var result = isWhiteMove ? GameResult.WhiteWon : GameResult.BlackWon;
+                        EndGame(session, result, GameEndReason.Checkmate, winnerId);
+                    }
+                    else 
+                    {
+                        // Check for Stalemate: Not in check, but no legal moves
+                        // We need to generate moves for the *next* side to move to see if they have any
+                        var nextMoves = session.Game.Pos.GenerateMoves();
+                        if (!nextMoves.Any() && !session.Game.Pos.InCheck)
+                        {
+                             EndGame(session, GameResult.Draw, GameEndReason.Stalemate, null);
+                        }
+                    }
+                    // TODO: Insufficient material, 50 move rule, etc.
+
                     return true;
                 }
             }
@@ -146,6 +172,67 @@ public class GameManager
             }
         }
         return false;
+    }
+
+    public GameSession? Resign(string gameId, string userId)
+    {
+        if (_games.TryGetValue(gameId, out var session) && session.Result == GameResult.Active)
+        {
+            if (session.WhiteUserId == userId)
+            {
+                EndGame(session, GameResult.BlackWon, GameEndReason.Resignation, session.BlackUserId);
+                return session;
+            }
+            else if (session.BlackUserId == userId)
+            {
+                EndGame(session, GameResult.WhiteWon, GameEndReason.Resignation, session.WhiteUserId);
+                return session;
+            }
+        }
+        return null;
+    }
+
+    public bool OfferDraw(string gameId, string userId)
+    {
+        if (_games.TryGetValue(gameId, out var session) && session.Result == GameResult.Active)
+        {
+            if (session.WhiteUserId == userId || session.BlackUserId == userId)
+            {
+                session.DrawOfferedByUserId = userId;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public GameSession? RespondDraw(string gameId, string userId, bool accept)
+    {
+        if (_games.TryGetValue(gameId, out var session) && session.Result == GameResult.Active)
+        {
+            // Can only accept if offer exists and NOT from self
+            if (!string.IsNullOrEmpty(session.DrawOfferedByUserId) && session.DrawOfferedByUserId != userId)
+            {
+                if (accept)
+                {
+                    EndGame(session, GameResult.Draw, GameEndReason.DrawAgreed, null);
+                    return session;
+                }
+                else
+                {
+                    session.DrawOfferedByUserId = null; // Decline clears the offer
+                    return null; // Null means game continues, not ended
+                }
+            }
+        }
+        return null;
+    }
+
+    private void EndGame(GameSession session, GameResult result, GameEndReason reason, string? winnerId)
+    {
+        session.Result = result;
+        session.EndReason = reason;
+        session.WinnerUserId = winnerId;
+        // Clean up or archive game logic here
     }
 
     public void RemoveGame(string gameId)
@@ -178,4 +265,29 @@ public class GameSession
     public long BlackTimeRemainingMs { get; set; }
     public long IncrementMs { get; set; }
     public long LastMoveTimestamp { get; set; }
+
+    // Game State
+    public GameResult Result { get; set; } = GameResult.Active;
+    public GameEndReason EndReason { get; set; } = GameEndReason.None;
+    public string? WinnerUserId { get; set; }
+    public string? DrawOfferedByUserId { get; set; } // UserId of player offering draw
+}
+
+public enum GameResult
+{
+    Active,
+    WhiteWon,
+    BlackWon,
+    Draw
+}
+
+public enum GameEndReason
+{
+    None,
+    Checkmate,
+    Resignation,
+    Timeout,
+    Stalemate,
+    DrawAgreed,
+    DrawDeclared // e.g. 50 move rule, repetition (simplified)
 }

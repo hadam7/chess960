@@ -71,13 +71,82 @@ public class GameHub : Hub
             {
                 if (_gameManager.MakeMove(gameId, move))
                 {
+                    // Broadcast Move
                     await Clients.Group(gameId).SendAsync("MoveMade", 
                         move, 
                         session.Game.Pos.FenNotation,
                         session.WhiteTimeRemainingMs,
                         session.BlackTimeRemainingMs);
+
+                    // Check if game ended via this move (Checkmate/Stalemate/Timeout detected in GameManager)
+                    if (session.Result != GameResult.Active)
+                    {
+                        await Clients.Group(gameId).SendAsync("GameOver", 
+                            session.WinnerUserId, 
+                            session.EndReason.ToString(), 
+                            session.Game.Pos.FenNotation);
+                    }
                 }
             }
+        }
+    }
+
+    public async Task Resign(string gameId)
+    {
+         var session = _gameManager.GetGame(gameId);
+         if (session == null) return;
+         
+         var userId = session.WhitePlayerId == Context.ConnectionId ? session.WhiteUserId : session.BlackUserId;
+         if (userId == null) return;
+
+         // Try to resign
+         var endedSession = _gameManager.Resign(gameId, userId);
+         
+         if (endedSession != null)
+         {
+             await Clients.Group(gameId).SendAsync("GameOver", 
+                 endedSession.WinnerUserId, 
+                 endedSession.EndReason.ToString(), 
+                 endedSession.Game.Pos.FenNotation);
+         }
+    }
+
+    public async Task OfferDraw(string gameId)
+    {
+        var session = _gameManager.GetGame(gameId);
+        if (session == null) return;
+        
+        var userId = session.WhitePlayerId == Context.ConnectionId ? session.WhiteUserId : session.BlackUserId;
+        if (userId == null) return;
+
+        if (_gameManager.OfferDraw(gameId, userId))
+        {
+            await Clients.Group(gameId).SendAsync("DrawOffered", userId);
+        }
+    }
+
+    public async Task RespondDraw(string gameId, bool accept)
+    {
+        var session = _gameManager.GetGame(gameId);
+        if (session == null) return;
+        
+        var userId = session.WhitePlayerId == Context.ConnectionId ? session.WhiteUserId : session.BlackUserId;
+        if (userId == null) return;
+
+        var endedSession = _gameManager.RespondDraw(gameId, userId, accept);
+        
+        if (endedSession != null)
+        {
+            // Draw Accepted -> Game Over
+             await Clients.Group(gameId).SendAsync("GameOver", 
+                 endedSession.WinnerUserId, 
+                 endedSession.EndReason.ToString(), 
+                 endedSession.Game.Pos.FenNotation);
+        }
+        else if (!accept)
+        {
+            // Draw Declined
+             await Clients.Group(gameId).SendAsync("DrawDeclined");
         }
     }
 }

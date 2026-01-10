@@ -11,6 +11,9 @@ public class MultiplayerService : IAsyncDisposable
     public event Action<string, string, string, string, long, long>? OnGameStarted;
     public event Action<string, string, long, long>? OnMoveMade;
     public event Action? OnWaitingForMatch;
+    public event Action<string, string, string>? OnGameOver; // winnerId, reason, fen
+    public event Action<string>? OnDrawOffered; // senderId
+    public event Action? OnDrawDeclined;
 
     public string? CurrentGameId { get; private set; }
     public string? MyConnectionId => _hubConnection?.ConnectionId;
@@ -46,6 +49,21 @@ public class MultiplayerService : IAsyncDisposable
             OnWaitingForMatch?.Invoke();
         });
 
+        _hubConnection.On<string, string, string>("GameOver", (winnerId, reason, fen) =>
+        {
+             OnGameOver?.Invoke(winnerId, reason, fen);
+        });
+
+        _hubConnection.On<string>("DrawOffered", (senderId) =>
+        {
+             OnDrawOffered?.Invoke(senderId);
+        });
+
+        _hubConnection.On("DrawDeclined", () =>
+        {
+             OnDrawDeclined?.Invoke();
+        });
+
         await _hubConnection.StartAsync();
     }
 
@@ -70,6 +88,30 @@ public class MultiplayerService : IAsyncDisposable
         if (_hubConnection is not null)
         {
             await _hubConnection.SendAsync("MakeMove", gameId, move);
+        }
+    }
+
+    public async Task ResignAsync(string gameId)
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("Resign", gameId);
+        }
+    }
+
+    public async Task OfferDrawAsync(string gameId)
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("OfferDraw", gameId);
+        }
+    }
+
+    public async Task RespondDrawAsync(string gameId, bool accept)
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("RespondDraw", gameId, accept);
         }
     }
 
