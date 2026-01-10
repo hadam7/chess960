@@ -11,6 +11,7 @@ using Chess960.Web.Data;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddControllers();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents()
     .AddInteractiveWebAssemblyComponents()
@@ -54,9 +55,13 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<Chess960.Web.Services.GameManager>();
 builder.Services.AddScoped<Chess960.Web.Services.EloService>();
 builder.Services.AddScoped<Chess960.Web.Services.GameHistoryService>();
+builder.Services.AddScoped<Chess960.Web.Services.GameHistoryService>();
 builder.Services.AddScoped<Chess960.Web.Client.Services.MultiplayerService>();
+builder.Services.AddScoped(sp => new HttpClient());
 
 var app = builder.Build();
+
+app.MapControllers();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

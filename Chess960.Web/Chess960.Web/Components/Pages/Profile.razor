@@ -2,10 +2,14 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Chess960.Web.Data
+@using Chess960.Web.Services
+@using Chess960.Web.Components.Dialogs
+@rendermode InteractiveServer
 @attribute [Authorize]
 
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject GameHistoryService HistoryService
 
 <PageTitle>Profile - Chess960</PageTitle>
 
@@ -75,24 +79,77 @@
             </div>
         </div>
 
-        <!-- Recent Activity / History Placeholder -->
+        <!-- Recent Activity / History -->
         <div class="glass-panel p-8 animate-soft-up animate-delay-200">
             <h2 class="text-2xl font-display font-bold text-white mb-6 border-b border-white/10 pb-4">Recent Activity</h2>
-            <div class="text-center py-16">
-                <div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 text-white/30 border border-white/10">
-                    <span class="bi bi-clock-history text-4xl"></span>
+            
+            @if (games == null)
+            {
+                 <div class="flex justify-center py-4">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                 </div>
-                <p class="text-theme-muted mb-8 font-medium text-lg">No recent games found.</p>
-                <a href="play-bot" class="btn-pill inline-block">
-                    Start a Game
-                </a>
-            </div>
+            }
+            else if (games.Count == 0)
+            {
+                <div class="text-center py-16">
+                    <div class="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6 text-white/30 border border-white/10">
+                        <span class="bi bi-clock-history text-4xl"></span>
+                    </div>
+                    <p class="text-theme-muted mb-8 font-medium text-lg">No recent games found.</p>
+                    <a href="play-online" class="btn-pill inline-block">
+                        Start a Game
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-white/40 border-b border-white/5 text-xs uppercase tracking-wider">
+                                <th class="p-4">Date</th>
+                                <th class="p-4">Opponent</th>
+                                <th class="p-4">Result</th>
+                                <th class="p-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-white/80">
+                            @foreach (var game in games)
+                            {
+                                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                                    <td class="p-4 font-mono text-sm">@game.DatePlayed.ToString("yyyy.MM.dd HH:mm")</td>
+                                    <td class="p-4 font-bold">
+                                        @(game.WhiteUserId == user.Id ? "vs Black" : "vs White")
+                                    </td>
+                                    <td class="p-4">
+                                        <span class="px-2 py-1 rounded text-xs font-bold uppercase tracking-wide @(GetResultClass(game))">
+                                            @GetResultLabel(game)
+                                        </span>
+                                    </td>
+                                    <td class="p-4 text-right">
+                                        <button @onclick="() => ViewGame(game)" class="text-theme-accent hover:text-white transition-colors">
+                                            <span class="bi bi-eye-fill mr-1"></span> View
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
         </div>
     }
 </div>
 
+@if (selectedGame != null)
+{
+    <GameReplayModal Game="selectedGame" OnClose="() => selectedGame = null" />
+}
+
 @code {
     private ApplicationUser? user;
+    private List<GameHistory>? games;
+    private GameHistory? selectedGame;
 
     protected override async Task OnInitializedAsync()
     {
@@ -102,6 +159,10 @@
         if (principal.Identity?.IsAuthenticated == true)
         {
             user = await UserManager.GetUserAsync(principal);
+            if (user != null)
+            {
+                games = await HistoryService.GetGamesForUserAsync(user.Id);
+            }
         }
     }
 
@@ -109,5 +170,29 @@
     {
         if (user == null || user.GamesPlayed == 0) return 0;
         return (int)((double)user.GamesWon / user.GamesPlayed * 100);
+    }
+
+    private string GetResultClass(GameHistory game)
+    {
+        // Simple logic: if I am White and Result is WhiteWon -> Win
+        bool amWhite = game.WhiteUserId == user?.Id;
+        if (game.Result == "Draw") return "bg-gray-500/20 text-gray-400";
+        if (game.Result == "WhiteWon") return amWhite ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400";
+        if (game.Result == "BlackWon") return (!amWhite) ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400";
+        return "bg-gray-500/20 text-gray-400";
+    }
+
+    private string GetResultLabel(GameHistory game)
+    {
+        bool amWhite = game.WhiteUserId == user?.Id;
+        if (game.Result == "Draw") return "Draw";
+        if (game.Result == "WhiteWon") return amWhite ? "Won" : "Lost";
+        if (game.Result == "BlackWon") return (!amWhite) ? "Won" : "Lost";
+        return "Unknown";
+    }
+
+    private void ViewGame(GameHistory game)
+    {
+        selectedGame = game;
     }
 }

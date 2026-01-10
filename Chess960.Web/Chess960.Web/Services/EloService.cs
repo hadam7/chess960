@@ -13,10 +13,10 @@ public class EloService
         _userManager = userManager;
     }
 
-    public async Task<(int whiteNew, int blackNew, int whiteDelta, int blackDelta)> UpdateRatingsAsync(string whiteName, string blackName, GameResult result)
+    public async Task<(int whiteNew, int blackNew, int whiteDelta, int blackDelta)> UpdateRatingsAsync(string whiteUserId, string blackUserId, GameResult result)
     {
-        var whiteUser = await _userManager.FindByNameAsync(whiteName);
-        var blackUser = await _userManager.FindByNameAsync(blackName);
+        var whiteUser = await _userManager.FindByIdAsync(whiteUserId);
+        var blackUser = await _userManager.FindByIdAsync(blackUserId);
 
         if (whiteUser == null || blackUser == null) return (0, 0, 0, 0);
 
@@ -49,10 +49,10 @@ public class EloService
         return (whiteUser.EloRating, blackUser.EloRating, whiteDelta, blackDelta);
     }
 
-    public async Task<(int whiteRating, int blackRating)> GetRatingsAsync(string whiteName, string blackName)
+    public async Task<(int whiteRating, int blackRating)> GetRatingsAsync(string whiteUserId, string blackUserId)
     {
-        var whiteUser = await _userManager.FindByNameAsync(whiteName);
-        var blackUser = await _userManager.FindByNameAsync(blackName);
+        var whiteUser = await _userManager.FindByIdAsync(whiteUserId);
+        var blackUser = await _userManager.FindByIdAsync(blackUserId);
 
         return (whiteUser?.EloRating ?? 1200, blackUser?.EloRating ?? 1200);
     }

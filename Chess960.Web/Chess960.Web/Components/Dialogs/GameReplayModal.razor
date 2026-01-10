@@ -1,0 +1,72 @@
+@using Chess960.Web.Data
+@using Chess960.Web.Client.Components
+
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div class="bg-[#1a1a1a] w-full max-w-4xl rounded-2xl shadow-2xl border border-white/10 flex flex-col md:flex-row overflow-hidden max-h-[90vh]">
+        
+        <!-- Board Area -->
+        <div class="flex-1 bg-black/40 flex items-center justify-center p-4">
+             <div class="aspect-square w-full max-w-[60vh] shadow-xl">
+                 <ChessBoard Fen="@Game.Fen" IsWhiteSide="@true" />
+             </div>
+        </div>
+
+        <!-- Details Area -->
+        <div class="w-full md:w-96 bg-[#1a1a1a] flex flex-col border-l border-white/5">
+            <div class="p-6 border-b border-white/5 flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-bold text-white mb-1">Game Details</h3>
+                    <p class="text-theme-muted text-sm">@Game.DatePlayed.ToString("F")</p>
+                </div>
+                <button @onclick="OnClose" class="text-white/30 hover:text-white transition-colors">
+                    <span class="bi bi-x-lg text-lg"></span>
+                </button>
+            </div>
+
+            <div class="p-6 flex-1 overflow-y-auto">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="text-center">
+                        <div class="w-12 h-12 rounded-full bg-white flex items-center justify-center text-black font-bold mx-auto mb-2">
+                             W
+                        </div>
+                        <p class="text-white font-bold text-sm">White</p>
+                        <!-- <p class="text-xs text-theme-muted">1200</p> -->
+                    </div>
+                    
+                    <div class="text-center px-4">
+                        <span class="text-2xl font-black italic text-theme-accent">VS</span>
+                        <div class="mt-2 px-3 py-1 bg-white/5 rounded text-xs font-bold uppercase tracking-wider">
+                            @Game.Result
+                        </div>
+                    </div>
+
+                    <div class="text-center">
+                        <div class="w-12 h-12 rounded-full bg-black flex items-center justify-center text-white font-bold mx-auto mb-2 border border-white/20">
+                             B
+                        </div>
+                        <p class="text-white font-bold text-sm">Black</p>
+                    </div>
+                </div>
+
+                <!-- Moves List -->
+                <div class="bg-black/30 rounded-lg p-4 border border-white/5">
+                    <h4 class="text-theme-muted text-xs font-bold uppercase tracking-widest mb-3">Moves</h4>
+                    <div class="font-mono text-xs text-white/70 break-words leading-relaxed">
+                        @Game.MovesPgn
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6 border-t border-white/5 bg-white/5">
+                <button @onclick="OnClose" class="w-full btn-secondary">
+                    Close Replay
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public GameHistory Game { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+}

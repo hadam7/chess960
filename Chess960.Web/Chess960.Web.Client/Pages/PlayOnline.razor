@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject MultiplayerService Multiplayer
 @inject ChessGameService GameService
+@inject HttpClient Http
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
 @implements IAsyncDisposable
@@ -447,8 +448,39 @@
         if (user.Identity != null && user.Identity.IsAuthenticated)
         {
             CurrentUserName = user.Identity.Name ?? "Player";
-            // Set Multiplayer ID to username so it propagates to opponent
-            Multiplayer.UserId = CurrentUserName;
+            
+            Console.WriteLine("[PlayOnline] User Claims:");
+            foreach(var claim in user.Claims)
+            {
+                Console.WriteLine($" - {claim.Type}: {claim.Value}");
+            }
+
+            // Set Multiplayer ID to User ID (Guid) for consistency
+             var userIdClaim = user.FindFirst(c => c.Type == System.Security.Claims.ClaimTypes.NameIdentifier) 
+                            ?? user.FindFirst("sub");
+            
+            if (userIdClaim != null)
+            {
+                Multiplayer.UserId = userIdClaim.Value;
+                Console.WriteLine($"[PlayOnline] Set Multiplayer.UserId to {Multiplayer.UserId}");
+            }
+            else
+            {
+                Console.WriteLine("[PlayOnline] WARNING: User ID claim missing. Attempting to fetch from API...");
+                try 
+                {
+                    var userInfo = await Http.GetFromJsonAsync<UserInfoResponse>("api/user/me");
+                    if (userInfo != null && !string.IsNullOrEmpty(userInfo.UserId))
+                    {
+                        Multiplayer.UserId = userInfo.UserId;
+                        Console.WriteLine($"[PlayOnline] Fetched UserID from API: {Multiplayer.UserId}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                     Console.WriteLine($"[PlayOnline] Failed to fetch user info: {ex.Message}");
+                }
+            }
         }
 
         await Multiplayer.InitializeAsync();
@@ -794,4 +826,9 @@
     }
 
 
+    private class UserInfoResponse
+    {
+        public string UserId { get; set; } = "";
+        public string UserName { get; set; } = "";
+    }
 }
