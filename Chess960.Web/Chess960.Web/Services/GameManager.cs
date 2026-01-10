@@ -143,6 +143,7 @@ public class GameManager
                     session.LastMoveTimestamp = now;
 
                     session.Game.Pos.MakeMove(move.Move, session.Game.Pos.State);
+                    session.Moves.Add(moveString);
 
                     // Check Game Over Conditions
                     if (session.Game.Pos.IsMate)
@@ -271,6 +272,7 @@ public class GameSession
     public GameEndReason EndReason { get; set; } = GameEndReason.None;
     public string? WinnerUserId { get; set; }
     public string? DrawOfferedByUserId { get; set; } // UserId of player offering draw
+    public List<string> Moves { get; set; } = new();
 }
 
 public enum GameResult

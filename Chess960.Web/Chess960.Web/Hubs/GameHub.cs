@@ -7,11 +7,13 @@ public class GameHub : Hub
 {
     private readonly GameManager _gameManager;
     private readonly EloService _eloService;
+    private readonly GameHistoryService _historyService;
 
-    public GameHub(GameManager gameManager, EloService eloService)
+    public GameHub(GameManager gameManager, EloService eloService, GameHistoryService historyService)
     {
         _gameManager = gameManager;
         _eloService = eloService;
+        _historyService = historyService;
     }
 
     // ... FindMatch and JoinGame unchanged ...
@@ -173,6 +175,9 @@ public class GameHub : Hub
     {
         // Calculate ELO changes
         var (wNew, bNew, wDelta, bDelta) = await _eloService.UpdateRatingsAsync(session.WhiteUserId, session.BlackUserId, session.Result);
+
+        // Save Game History
+        await _historyService.SaveGameAsync(session, session.Result, session.EndReason.ToString());
 
         await Clients.Group(session.GameId).SendAsync("GameOver", 
              session.WinnerUserId, 

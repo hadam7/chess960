@@ -53,6 +53,7 @@ builder.Services.AddScoped<Chess960.Web.Client.Services.ChessGameService>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<Chess960.Web.Services.GameManager>();
 builder.Services.AddScoped<Chess960.Web.Services.EloService>();
+builder.Services.AddScoped<Chess960.Web.Services.GameHistoryService>();
 builder.Services.AddScoped<Chess960.Web.Client.Services.MultiplayerService>();
 
 var app = builder.Build();
