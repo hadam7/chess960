@@ -1,0 +1,72 @@
+@implements IDisposable
+
+<div class="@Class">
+    @FormattedTime
+</div>
+
+@code {
+    [Parameter] public long TimeMs { get; set; }
+    [Parameter] public bool IsRunning { get; set; }
+    [Parameter] public string Class { get; set; } = "";
+
+    private System.Threading.Timer? _timer;
+    private long _internalTimeMs;
+    private long _lastProvidedTimeMs = -1;
+
+    protected override void OnInitialized()
+    {
+        _internalTimeMs = TimeMs;
+        _lastProvidedTimeMs = TimeMs;
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Only update internal time if the provided time has actually changed (e.g. server update)
+        // This prevents the clock from resetting if the parent re-renders with the same time.
+        if (TimeMs != _lastProvidedTimeMs)
+        {
+            _internalTimeMs = TimeMs;
+            _lastProvidedTimeMs = TimeMs;
+        }
+
+        UpdateTimer();
+    }
+
+    private void UpdateTimer()
+    {
+        if (IsRunning)
+        {
+            if (_timer == null)
+            {
+                _timer = new System.Threading.Timer(_ => 
+                {
+                    if (_internalTimeMs > 0)
+                    {
+                        _internalTimeMs = Math.Max(0, _internalTimeMs - 100);
+                        InvokeAsync(StateHasChanged);
+                    }
+                }, null, 0, 100);
+            }
+        }
+        else
+        {
+            _timer?.Dispose();
+            _timer = null;
+        }
+    }
+
+    private string FormattedTime
+    {
+        get
+        {
+            var span = TimeSpan.FromMilliseconds(_internalTimeMs);
+            if (span.TotalHours >= 1) return span.ToString(@"h\:mm\:ss");
+            return span.ToString(@"mm\:ss");
+        }
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
+}

@@ -14,9 +14,11 @@ public class GameHub : Hub
 
     public async Task FindMatch(string userId, string timeControl)
     {
+        Console.WriteLine($"[Hub] FindMatch: User={userId}, Conn={Context.ConnectionId}");
         var session = _gameManager.FindMatch(Context.ConnectionId, userId, timeControl);
         if (session != null)
         {
+            Console.WriteLine($"[Hub] Match Found! Game={session.GameId}. White={session.WhiteUserId}, Black={session.BlackUserId}");
             // Match found!
             await Groups.AddToGroupAsync(session.WhitePlayerId, session.GameId);
             await Groups.AddToGroupAsync(session.BlackPlayerId!, session.GameId);
@@ -32,6 +34,7 @@ public class GameHub : Hub
         }
         else
         {
+            Console.WriteLine($"[Hub] Added to queue: {userId}");
             // Added to queue
             await Clients.Caller.SendAsync("WaitingForMatch");
         }
@@ -39,14 +42,18 @@ public class GameHub : Hub
 
     public async Task<bool> JoinGame(string gameId, string userId)
     {
+        Console.WriteLine($"[Hub] JoinGame: Game={gameId}, User={userId}, Conn={Context.ConnectionId}");
         var success = _gameManager.JoinGame(gameId, Context.ConnectionId, userId);
+        Console.WriteLine($"[Hub] JoinGame Result: {success}");
+        
         if (success)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
             var session = _gameManager.GetGame(gameId);
             
             // Notify both players that game started (or person reconnected)
-            await Clients.Group(gameId).SendAsync("GameStarted", 
+            // Fix: Send only to caller to avoid infinite loop where opponent reloads -> joins -> triggers reload for me -> I join -> trigger reload for them...
+            await Clients.Caller.SendAsync("GameStarted", 
                 session?.GameId, 
                 session?.Game.Pos.FenNotation, 
                 session?.WhiteUserId, 
@@ -58,19 +65,26 @@ public class GameHub : Hub
         return false;
     }
 
-    public async Task MakeMove(string gameId, string move)
+    public async Task MakeMove(string gameId, string move, string userId)
     {
+        Console.WriteLine($"[Hub] MakeMove: Game={gameId}, Move={move}, User={userId}, Conn={Context.ConnectionId}");
         var session = _gameManager.GetGame(gameId);
         if (session != null)
         {
             // Verify it's this player's turn
             var isWhiteTurn = session.Game.Pos.SideToMove.IsWhite;
-            var isPlayerWhite = Context.ConnectionId == session.WhitePlayerId;
             
-            if (isWhiteTurn == isPlayerWhite)
+            // Robust Check: Use UserID to identify player (handles reconnects/tabs/ghost connections)
+            var isPlayerWhite = session.WhiteUserId == userId;
+            var isPlayerBlack = session.BlackUserId == userId;
+            
+            Console.WriteLine($"[Hub] Turn: {(isWhiteTurn ? "White" : "Black")}. User is: {(isPlayerWhite ? "White" : (isPlayerBlack ? "Black" : "Spectator"))}");
+
+            if ((isWhiteTurn && isPlayerWhite) || (!isWhiteTurn && isPlayerBlack))
             {
                 if (_gameManager.MakeMove(gameId, move))
                 {
+                    Console.WriteLine($"[Hub] Move Valid. Broadcasting...");
                     // Broadcast Move
                     await Clients.Group(gameId).SendAsync("MoveMade", 
                         move, 
@@ -78,7 +92,7 @@ public class GameHub : Hub
                         session.WhiteTimeRemainingMs,
                         session.BlackTimeRemainingMs);
 
-                    // Check if game ended via this move (Checkmate/Stalemate/Timeout detected in GameManager)
+                    // Check if game ended via this move
                     if (session.Result != GameResult.Active)
                     {
                         await Clients.Group(gameId).SendAsync("GameOver", 
@@ -87,7 +101,19 @@ public class GameHub : Hub
                             session.Game.Pos.FenNotation);
                     }
                 }
+                else 
+                {
+                    Console.WriteLine($"[Hub] GameManager rejected move.");
+                }
             }
+            else
+            {
+                Console.WriteLine($"[Hub] Not player's turn or ID mismatch.");
+            }
+        }
+        else
+        {
+            Console.WriteLine($"[Hub] Session not found.");
         }
     }
 

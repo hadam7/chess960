@@ -1,9 +1,11 @@
 @page "/play-online"
 @using Chess960.Web.Client.Services
 @using Chess960.Web.Client.Components
+@using Microsoft.AspNetCore.Components.Authorization
 @inject MultiplayerService Multiplayer
 @inject ChessGameService GameService
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 @implements IAsyncDisposable
 @using System.Threading
 @rendermode InteractiveWebAssembly
@@ -24,16 +26,16 @@
                         <span class="bi bi-person-fill text-base text-white/50"></span>
                     </div>
                     <div class="flex flex-col leading-none justify-center">
-                        <span class="font-bold text-[10px] tracking-wide text-white/90">Opponent</span>
+                        <span class="font-bold text-[10px] tracking-wide text-white/90">@OpponentName</span>
                         <span class="text-[9px] text-theme-muted font-mono">1500</span>
                     </div>
                 </div>
                 <!-- Dead Pieces (Placeholder) -->
                 <div class="flex-1"></div>
                 <!-- Clock -->
-                <div class="bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 @(IsOpponentTurn ? "text-white bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.1)]" : "text-white/30")">
-                    @FormatTime(OpponentTimeMs)
-                </div>
+                <ChessClock TimeMs="@OpponentTimeMs" 
+                            IsRunning="@(IsOpponentTurn && !ShowGameOverModal)"
+                            Class="@(IsOpponentTurn ? "bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 text-white bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.1)]" : "bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 text-white/30")" />
             </div>
         }
 
@@ -107,16 +109,16 @@
                         <span class="bi bi-person-fill text-base"></span>
                     </div>
                     <div class="flex flex-col leading-none justify-center">
-                        <span class="font-bold text-[10px] tracking-wide text-white/90">You</span>
+                        <span class="font-bold text-[10px] tracking-wide text-white/90">@CurrentUserName</span>
                         <span class="text-[9px] text-theme-muted font-mono">1500</span>
                     </div>
                 </div>
                  <!-- Dead Pieces (Placeholder) -->
                 <div class="flex-1"></div>
-                <!-- Clock -->
-                 <div class="bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 @(IsMyTurn ? "bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "text-white/30")">
-                    @FormatTime(MyTimeMs)
-                </div>
+                 <!-- Clock -->
+                 <ChessClock TimeMs="@MyTimeMs" 
+                            IsRunning="@(IsMyTurn && !ShowGameOverModal)"
+                            Class="@(IsMyTurn ? "bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 text-white/30")" />
             </div>
         }
     </div>
@@ -375,11 +377,13 @@
     private bool isSearching = false;
     private string activeTab = "new-game";
     private string selectedTimeControl = "3+2"; 
+    private string CurrentUserName = "You";
+    private string OpponentName = "Opponent"; 
     
     // Time State
     private long WhiteTimeMs { get; set; }
     private long BlackTimeMs { get; set; }
-    private Timer? clockTimer;
+    // private Timer? clockTimer; -- Removed in favor of ChessClock component
 
     // Game End State
     private string? GameOverMessage;
@@ -404,6 +408,17 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Auth check
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            CurrentUserName = user.Identity.Name ?? "Player";
+            // Set Multiplayer ID to username so it propagates to opponent
+            Multiplayer.UserId = CurrentUserName;
+        }
+
         await Multiplayer.InitializeAsync();
         
         Multiplayer.OnWaitingForMatch += HandleWaiting;
@@ -415,7 +430,11 @@
 
         if (!string.IsNullOrEmpty(GameId))
         {
-            await Multiplayer.JoinGame(GameId);
+            // Only join if not already in this game (prevents redundant joins on navigation)
+            if (Multiplayer.CurrentGameId != GameId)
+            {
+                await Multiplayer.JoinGame(GameId);
+            }
             activeTab = "game";
         }
         else 
@@ -424,7 +443,7 @@
         }
 
         CheckGameStatus();
-        StartClockTimer();
+        // StartClockTimer(); -- Handled by ChessClock
     }
 
     private void CheckGameStatus()
@@ -442,23 +461,18 @@
         }
     }
 
-    private void StartClockTimer()
-    {
-        clockTimer = new Timer(_ => 
-        {
-            if (!string.IsNullOrEmpty(GameId) && GameService.Game != null)
-            {
-                 var sideToMove = GameService.Game.Pos.SideToMove.IsWhite;
-                 if (sideToMove) WhiteTimeMs = Math.Max(0, WhiteTimeMs - 100);
-                 else BlackTimeMs = Math.Max(0, BlackTimeMs - 100);
-                 
-                 InvokeAsync(StateHasChanged);
-            }
-        }, null, 0, 100);
-    }
+    // private void StartClockTimer() ... Removed
 
     private async Task FindMatch()
     {
+        // Auth guard before searching
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity == null || !authState.User.Identity.IsAuthenticated)
+        {
+            Nav.NavigateTo("Account/Login");
+            return;
+        }
+
         if (isSearching) return;
         isSearching = true;
         await Multiplayer.FindMatch(selectedTimeControl);
@@ -484,6 +498,17 @@
         Black = blackId;
         WhiteTimeMs = whiteTime;
         BlackTimeMs = blackTime;
+
+        // Determine Opponent Name
+        // whiteId and blackId are effectively the UserNames now
+        if (Multiplayer.UserId == whiteId)
+        {
+             OpponentName = blackId;
+        }
+        else
+        {
+             OpponentName = whiteId;
+        }
         
         moveList.Clear(); // New game
         
@@ -502,12 +527,14 @@
 
     private async Task HandleLocalMove((string from, string to) move)
     {
+        Console.WriteLine($"[Client] HandleLocalMove: {move.from} -> {move.to}. GameId: {GameId}");
         if (!string.IsNullOrEmpty(GameId))
         {
              // Add to list optimistically or wait for server?
              // Ideally wait, but for responsiveness...
              // Let's rely on GameService update or just push to server.
              await Multiplayer.MakeMove(GameId, move.from + move.to);
+             Console.WriteLine("[Client] Sent move to server.");
              
              // Optimistic update for history? 
              // Better to wait for server confirmation usually, but for responsiveness we might update local board.
@@ -550,11 +577,13 @@
          // Add move to history
          moveList.Add(moveString); 
 
-         GameService.MakeMove(from, to);
-
+         // Critical Fix: Sync state perfectly with server
+         // Instead of relying on local MakeMove (which might fail or differ), 
+         // we force the local board to the server's FEN.
+         GameService.StartGameFromFen(fen);
+         
          // Update history with new state
-         var newFen = GameService.GetFen();
-         fenHistory.Add(newFen);
+         fenHistory.Add(fen);
          
          // If we were at the end, stay at the end
          if (currentViewIndex == fenHistory.Count - 2)
@@ -591,17 +620,13 @@
          return $"{baseClass} bg-black/40 border-white/10 text-theme-muted hover:bg-white/10 hover:text-white";
     }
     
-    private string FormatTime(long ms)
-    {
-        var span = TimeSpan.FromMilliseconds(ms);
-        if (span.TotalHours >= 1) return span.ToString(@"h\:mm\:ss");
-        return span.ToString(@"mm\:ss");
-    }
+    // FormatTime removed
+
 
     private void HandleGameOver(string winnerId, string reason, string fen)
     {
-         if (clockTimer != null) clockTimer.Dispose(); // Stop timer
-         ShowGameOverModal = true;
+          // if (clockTimer != null) clockTimer.Dispose(); // Stop timer -- handled by IsRunning props
+          ShowGameOverModal = true;
          
          // Update board one last time to show final position (e.g. mate)
          GameService.StartGameFromFen(fen);
@@ -709,7 +734,7 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (clockTimer is not null) await clockTimer.DisposeAsync();
+
         
         Multiplayer.OnWaitingForMatch -= HandleWaiting;
         Multiplayer.OnGameStarted -= HandleGameStarted;

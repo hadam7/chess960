@@ -17,7 +17,7 @@ public class MultiplayerService : IAsyncDisposable
 
     public string? CurrentGameId { get; private set; }
     public string? MyConnectionId => _hubConnection?.ConnectionId;
-    public string UserId { get; private set; } = Guid.NewGuid().ToString();
+    public string UserId { get; set; } = Guid.NewGuid().ToString();
 
     public MultiplayerService(NavigationManager navigationManager)
     {
@@ -87,7 +87,7 @@ public class MultiplayerService : IAsyncDisposable
     {
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("MakeMove", gameId, move);
+            await _hubConnection.SendAsync("MakeMove", gameId, move, UserId);
         }
     }
 
