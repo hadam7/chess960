@@ -13,52 +13,52 @@
 <div class="h-[calc(100vh-4rem)] flex flex-col md:flex-row overflow-hidden animate-soft-up">
     
     <!-- LEFT: Game Area (Bars + Board) -->
-    <div class="flex-1 flex flex-col items-center justify-center p-2 gap-2">
+    <div class="flex-1 flex flex-col items-center justify-center p-1 gap-1">
         
         <!-- Opponent Bar -->
         @if (!string.IsNullOrEmpty(GameId))
         {
-            <div class="w-full max-w-[85vh] flex items-center justify-between bg-black/60 backdrop-blur-md rounded p-2 text-white shadow-lg border border-white/5">
-                <div class="flex items-center gap-3">
-                     <div class="w-10 h-10 rounded bg-white/10 flex items-center justify-center border border-white/10">
-                        <span class="bi bi-person-fill text-xl text-white/50"></span>
+            <div class="w-full max-w-[76vh] flex items-center justify-between bg-black/60 backdrop-blur-md rounded-md p-1 text-white shadow-lg border border-white/5 transition-all">
+                <div class="flex items-center gap-2">
+                     <div class="w-7 h-7 rounded bg-white/10 flex items-center justify-center border border-white/5 shadow-inner">
+                        <span class="bi bi-person-fill text-base text-white/50"></span>
                     </div>
-                    <div class="flex flex-col leading-tight">
-                        <span class="font-bold text-sm">Opponent</span>
-                        <span class="text-xs text-theme-muted">1500</span>
+                    <div class="flex flex-col leading-none justify-center">
+                        <span class="font-bold text-[10px] tracking-wide text-white/90">Opponent</span>
+                        <span class="text-[9px] text-theme-muted font-mono">1500</span>
                     </div>
                 </div>
                 <!-- Dead Pieces (Placeholder) -->
                 <div class="flex-1"></div>
                 <!-- Clock -->
-                <div class="bg-black/30 px-3 py-1 rounded font-mono text-xl font-bold @(IsOpponentTurn ? "text-white bg-white/10" : "text-white/40")">
+                <div class="bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 @(IsOpponentTurn ? "text-white bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.1)]" : "text-white/30")">
                     @FormatTime(OpponentTimeMs)
                 </div>
             </div>
         }
 
         <!-- Board -->
-        <div class="relative w-full max-w-[85vh] aspect-square shadow-2xl rounded overflow-hidden border-4 border-white/5 bg-black/50">
+        <div class="w-full max-w-[76vh] relative aspect-square shadow-2xl rounded-none overflow-hidden border-2 border-white/10 bg-black/50 ring-1 ring-white/5 transition-all duration-500 ease-in-out">
              <ChessBoard IsWhiteSide="@amIWhite" OnMove="HandleLocalMove" />
         </div>
 
         <!-- Player Bar -->
         @if (!string.IsNullOrEmpty(GameId))
         {
-            <div class="w-full max-w-[85vh] flex items-center justify-between bg-black/60 backdrop-blur-md rounded p-2 text-white shadow-lg border border-white/5">
-                <div class="flex items-center gap-3">
-                     <div class="w-10 h-10 rounded bg-theme-accent text-black flex items-center justify-center shadow-[0_0_15px_rgba(var(--color-accent),0.3)]">
-                        <span class="bi bi-person-fill text-xl"></span>
+            <div class="w-full max-w-[76vh] flex items-center justify-between bg-black/60 backdrop-blur-md rounded-md p-1 text-white shadow-lg border border-white/5 transition-all">
+                <div class="flex items-center gap-2">
+                     <div class="w-7 h-7 rounded bg-theme-accent text-black flex items-center justify-center shadow-[0_0_10px_rgba(var(--color-accent),0.3)]">
+                        <span class="bi bi-person-fill text-base"></span>
                     </div>
-                    <div class="flex flex-col leading-tight">
-                        <span class="font-bold text-sm">You</span>
-                        <span class="text-xs text-theme-muted">1500</span>
+                    <div class="flex flex-col leading-none justify-center">
+                        <span class="font-bold text-[10px] tracking-wide text-white/90">You</span>
+                        <span class="text-[9px] text-theme-muted font-mono">1500</span>
                     </div>
                 </div>
                  <!-- Dead Pieces (Placeholder) -->
                 <div class="flex-1"></div>
                 <!-- Clock -->
-                 <div class="bg-black/30 px-3 py-1 rounded font-mono text-xl font-bold @(IsMyTurn ? "bg-white text-black" : "text-white/40")">
+                 <div class="bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 @(IsMyTurn ? "bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "text-white/30")">
                     @FormatTime(MyTimeMs)
                 </div>
             </div>
