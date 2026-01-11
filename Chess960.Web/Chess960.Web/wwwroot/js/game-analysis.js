@@ -20,6 +20,8 @@ export function initAnalysis() {
     if (!stockfish) {
         stockfish = new Worker('/lib/stockfish/stockfish.js');
         stockfish.postMessage('uci');
+        stockfish.postMessage('setoption name Hash value 32');
+        stockfish.postMessage('setoption name Threads value 2');
         stockfish.postMessage('isready');
 
         stockfish.onmessage = (e) => {
@@ -57,13 +59,13 @@ function analyze(fen) {
     clearArrow();
 
     // Update status
-    document.getElementById('eval-display').innerHTML = '<span class="animate-pulse">...</span>';
+    document.getElementById('eval-display').innerHTML = '<span class="animate-pulse">⏳</span>';
 
     // Stop previous
     stockfish.postMessage('stop');
-    stockfish.postMessage('ucinewgame');
+    // stockfish.postMessage('ucinewgame'); 
     stockfish.postMessage(`position fen ${fen}`);
-    stockfish.postMessage('go depth 20');
+    stockfish.postMessage('go depth 22');
 }
 
 function parseInfo(msg) {
