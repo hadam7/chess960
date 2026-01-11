@@ -18,6 +18,7 @@ public class GameHistory
 
     public string MovesPgn { get; set; } = string.Empty; // Store moves
     public string Fen { get; set; } = string.Empty; // Final position
+    public string InitialFen { get; set; } = string.Empty; // Starting position (Crucial for Chess960)
 
     public DateTime DatePlayed { get; set; } = DateTime.UtcNow;
 }

@@ -127,9 +127,9 @@
                                         </span>
                                     </td>
                                     <td class="p-4 text-right">
-                                        <button @onclick="() => ViewGame(game)" class="text-theme-accent hover:text-white transition-colors">
+                                        <a href="replay/@game.Id" class="text-theme-accent hover:text-white transition-colors inline-block">
                                             <span class="bi bi-eye-fill mr-1"></span> View
-                                        </button>
+                                        </a>
                                     </td>
                                 </tr>
                             }
@@ -141,15 +141,9 @@
     }
 </div>
 
-@if (selectedGame != null)
-{
-    <GameReplayModal Game="selectedGame" OnClose="() => selectedGame = null" />
-}
-
 @code {
     private ApplicationUser? user;
     private List<GameHistory>? games;
-    private GameHistory? selectedGame;
 
     protected override async Task OnInitializedAsync()
     {
@@ -189,10 +183,5 @@
         if (game.Result == "WhiteWon") return amWhite ? "Won" : "Lost";
         if (game.Result == "BlackWon") return (!amWhite) ? "Won" : "Lost";
         return "Unknown";
-    }
-
-    private void ViewGame(GameHistory game)
-    {
-        selectedGame = game;
     }
 }

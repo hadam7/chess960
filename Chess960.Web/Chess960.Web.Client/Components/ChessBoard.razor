@@ -77,6 +77,14 @@
         GameService.OnStateChanged += StateHasChanged;
     }
 
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(OverlayFen))
+        {
+            Console.WriteLine($"[ChessBoard] OverlayFen update: {OverlayFen}");
+        }
+    }
+
     public void Dispose()
     {
         GameService.OnStateChanged -= StateHasChanged;

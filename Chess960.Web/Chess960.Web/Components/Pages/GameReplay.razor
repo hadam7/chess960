@@ -1,0 +1,367 @@
+@page "/replay/{GameId:guid}"
+@using Chess960.Web.Data
+@using Chess960.Web.Services
+@using Chess960.Web.Client.Components
+@using Rudzoft.ChessLib
+@using Rudzoft.ChessLib.Factories
+@using Rudzoft.ChessLib.Types
+@using Rudzoft.ChessLib.Validation
+@using Rudzoft.ChessLib.MoveGeneration
+@using Microsoft.AspNetCore.Components.Web
+@inject GameHistoryService HistoryService
+@* Static SSR requires no rendermode (or defaults to static) *@
+
+<PageTitle>Game Replay</PageTitle>
+
+<div class="max-w-6xl mx-auto py-10 px-4 focus:outline-none">
+    <a href="/profile" class="text-theme-muted hover:text-white transition-colors mb-6 inline-flex items-center gap-2">
+        <span class="bi bi-arrow-left"></span> Back to Profile
+    </a>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-8">
+             <div class="bg-red-900/50 border border-red-500 text-white p-6 rounded-lg max-w-2xl shadow-2xl">
+                <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <span class="bi bi-exclamation-triangle-fill text-yellow-500"></span> 
+                    Replay Error
+                </h2>
+                <pre class="whitespace-pre-wrap text-xs font-mono bg-black/50 p-4 rounded border border-red-500/30 overflow-auto max-h-[60vh]">
+                    @errorMessage
+                </pre>
+                <div class="mt-4 flex justify-end">
+                     <a href="/" class="px-4 py-2 bg-white text-black font-bold rounded hover:scale-105 transition-transform">Go Home</a>
+                </div>
+             </div>
+        </div>
+    }
+
+    @if (game == null)
+    {
+        @if (isLoading && string.IsNullOrEmpty(errorMessage))
+        {
+             <div class="flex justify-center items-center h-64">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-theme-accent"></div>
+            </div>
+        }
+        else
+        {
+             <div class="text-center py-16 text-white">
+                <span class="bi bi-exclamation-circle text-4xl mb-4 text-red-500"></span>
+                <p class="text-xl">Game not found.</p>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="glass-panel overflow-hidden flex flex-col md:flex-row h-[80vh]">
+             <!-- Board Area -->
+            <div class="flex-1 bg-black/40 flex flex-col items-center justify-center p-4 gap-4" 
+                 id="replay-board-container" 
+                 data-fen="@CurrentFen">
+                 
+                 <div class="aspect-square w-full max-w-[70vh] shadow-xl relative">
+                     <ChessBoard OverlayFen="@CurrentFen" IsWhiteSide="@true" />
+                     
+                     <!-- Analysis Overlay (Arrows) -->
+                     <div id="analysis-overlay" class="absolute inset-0 pointer-events-none z-30 overflow-visible"></div>
+                 </div>
+                 
+                 <!-- Controls (URL Driven) -->
+                 <div class="flex items-center gap-4 bg-[#1a1a1a] p-3 rounded-full border border-white/10 shadow-lg relative">
+                     
+                     <!-- Eval Display -->
+                     <div id="eval-display" class="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap"></div>
+                     
+                     <a href="@GetLink(0)" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 text-white/70 hover:text-white transition-colors" title="First Move (Home)">
+                         <span class="bi bi-skip-start-fill text-xl"></span>
+                     </a>
+                     <a href="@GetLink(currentMoveIndex - 1)" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 text-white/70 hover:text-white transition-colors @(currentMoveIndex <= 0 ? "pointer-events-none opacity-50" : "")" title="Previous Move (Left Arrow)">
+                         <span class="bi bi-caret-left-fill text-xl"></span>
+                     </a>
+                     
+                     <span class="text-theme-muted font-mono text-sm min-w-[3ch] text-center">
+                         @(currentMoveIndex)/@(replaySteps.Count)
+                     </span>
+
+                     <a href="@GetLink(currentMoveIndex + 1)" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 text-white/70 hover:text-white transition-colors @(currentMoveIndex >= replaySteps.Count ? "pointer-events-none opacity-50" : "")" title="Next Move (Right Arrow)">
+                         <span class="bi bi-caret-right-fill text-xl"></span>
+                     </a>
+                     <a href="@GetLink(replaySteps.Count)" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-white/10 text-white/70 hover:text-white transition-colors" title="Last Move (End)">
+                         <span class="bi bi-skip-end-fill text-xl"></span>
+                     </a>
+                 </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="w-full md:w-96 border-l border-white/5 flex flex-col bg-[#1a1a1a]">
+                <!-- Header -->
+                <div class="p-6 border-b border-white/5">
+                    <h1 class="text-2xl font-bold text-white mb-1">Game Replay</h1>
+                    <p class="text-theme-muted text-sm">@game.DatePlayed.ToString("F")</p>
+                </div>
+
+                <!-- Players -->
+                <div class="p-6 flex items-center justify-between border-b border-white/5 bg-white/5">
+                     <div class="text-center">
+                        <div class="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center font-bold mx-auto mb-2">W</div>
+                        <p class="text-white font-bold text-sm truncate max-w-[80px]" title="@game.WhiteUserName">@game.WhiteUserName</p>
+                    </div>
+                    
+                    <div class="text-center">
+                        <div class="px-3 py-1 bg-black/40 rounded text-xs font-bold uppercase tracking-wider text-theme-accent mb-1 border border-white/10">
+                            @game.Result
+                        </div>
+                        <span class="text-white/30 text-xs">VS</span>
+                    </div>
+
+                    <div class="text-center">
+                        <div class="w-12 h-12 rounded-full bg-black text-white border border-white/20 flex items-center justify-center font-bold mx-auto mb-2">B</div>
+                        <p class="text-white font-bold text-sm truncate max-w-[80px]" title="@game.BlackUserName">@game.BlackUserName</p>
+                    </div>
+                </div>
+
+                <!-- Moves Table -->
+                <div class="flex-1 overflow-y-auto custom-scrollbar bg-[#111]">
+                    <h3 class="sticky top-0 bg-[#1a1a1a] p-3 text-xs font-bold text-theme-muted uppercase tracking-widest border-b border-white/5 z-10 flex items-center gap-2">
+                        <span class="bi bi-list-ol"></span> Move History
+                    </h3>
+                    
+                    <div class="grid grid-cols-[3rem_1fr_1fr] text-sm">
+                         <!-- Header Row -->
+                        <div class="py-2 text-center text-white/30 font-mono text-xs border-b border-white/5 bg-[#151515]">#</div>
+                        <div class="py-2 pl-4 text-white/30 font-mono text-xs border-b border-white/5 bg-[#151515]">White</div>
+                        <div class="py-2 pl-4 text-white/30 font-mono text-xs border-b border-white/5 bg-[#151515]">Black</div>
+
+                        @for (int i = 0; i < replaySteps.Count; i += 2)
+                        {
+                            int moveNum = (i / 2) + 1;
+                            var whiteStepIndex = i;
+                            var blackStepIndex = i + 1;
+                            
+                            bool isWhiteActive = (currentMoveIndex - 1) == whiteStepIndex;
+                            bool isBlackActive = (currentMoveIndex - 1) == blackStepIndex;
+
+                            <div class="py-2 text-center text-white/30 font-mono text-xs bg-[#1a1a1a]/50 border-b border-white/5">@moveNum.</div>
+                            
+                            <!-- White Move -->
+                            <a href="@GetLink(whiteStepIndex + 1)" class="py-2 pl-4 block hover:bg-white/5 transition-colors border-b border-white/5 @(isWhiteActive ? "bg-theme-accent/20 text-theme-accent font-bold" : "text-white/70") decoration-transparent">
+                                @replaySteps[whiteStepIndex].SanMove
+                            </a>
+
+                            <!-- Black Move -->
+                            <div class="border-b border-white/5">
+                                @if (blackStepIndex < replaySteps.Count)
+                                {
+                                    <a href="@GetLink(blackStepIndex + 1)" class="py-2 pl-4 block hover:bg-white/5 transition-colors @(isBlackActive ? "bg-theme-accent/20 text-theme-accent font-bold" : "text-white/70") decoration-transparent">
+                                        @replaySteps[blackStepIndex].SanMove
+                                    </a>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<script type="module" src="/js/game-analysis.js"></script>
+
+@code {
+    [Parameter] public Guid GameId { get; set; }
+    
+    [SupplyParameterFromQuery(Name = "step")]
+    public int? StepQuery { get; set; }
+
+    private GameHistory? game;
+    private bool isLoading = true;
+    
+    // Replay Logic
+    private List<ReplayStep> replaySteps = new();
+    private int currentMoveIndex = 0; // 0 = Start Position, 1 = After 1st move...
+    private string InitialFen = "";
+
+    private string CurrentFen => currentMoveIndex == 0 ? InitialFen : (currentMoveIndex <= replaySteps.Count ? replaySteps[currentMoveIndex - 1].FenAfter : InitialFen);
+
+    private class ReplayStep
+    {
+        public string SanMove { get; set; } = "";
+        public string FenAfter { get; set; } = "";
+        public string FromSquare { get; set; } = "";
+        public string ToSquare { get; set; } = "";
+    }
+
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            game = await HistoryService.GetGameByIdAsync(GameId);
+            if (game != null)
+            {
+                ParseGame(game.MovesPgn);
+            }
+            // errorMessage = "DIAGNOSTIC MODE: Game Loaded from DB? " + (game != null ? "YES" : "NO");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"CRITICAL ERROR: {ex.Message} \n {ex.StackTrace}";
+            Console.WriteLine(errorMessage);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    protected override void OnParametersSet()
+    {
+        // Update index based on URL parameter
+        if (StepQuery.HasValue)
+        {
+            currentMoveIndex = Math.Clamp(StepQuery.Value, 0, replaySteps.Count);
+        }
+        else
+        {
+            currentMoveIndex = 0;
+        }
+    }
+
+    private string GetLink(int stepIndex)
+    {
+        // Construct clean URL
+        return $"/replay/{GameId}?step={stepIndex}";
+    }
+
+
+    private void ParseGame(string movesPgn)
+    {
+        Console.WriteLine($"[GameReplay] Parsing PGN: {movesPgn}");
+        
+        try
+        {
+            // Initialize Game Board
+            var tempGame = GameFactory.Create();
+            if (!string.IsNullOrEmpty(game?.InitialFen)) 
+            {
+                 Console.WriteLine($"[GameReplay] Using stored Initial FEN: {game.InitialFen}");
+                 tempGame = GameFactory.Create(game.InitialFen);
+                 InitialFen = game.InitialFen; // Set local state
+            }
+            else
+            {
+                 Console.WriteLine("[GameReplay] No Initial FEN found. Assuming Standard Start Position.");
+                 tempGame.NewGame(); 
+                 InitialFen = tempGame.Pos.FenNotation;
+            }
+            
+            if (string.IsNullOrWhiteSpace(movesPgn)) 
+            {
+                Console.WriteLine("[GameReplay] PGN is empty.");
+                return;
+            }
+
+            var moveStrings = movesPgn.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            Console.WriteLine($"[GameReplay] Found {moveStrings.Length} moves to parse.");
+            
+            int moveIdx = 0;
+            foreach (var moveStr in moveStrings)
+            {
+                moveIdx++;
+                try
+                {
+                    // MoveStr is raw coordinate e.g. "e2e4"
+                    if (moveStr.Length < 4) continue;
+
+                    var from = moveStr.Substring(0, 2);
+                    var to = moveStr.Substring(2, 2);
+                    
+                    var fromSq = new Square(from);
+                    var toSq = new Square(to);
+                    
+                    // Find valid move
+                    var extMove = tempGame.Pos.GenerateMoves()
+                                .FirstOrDefault(m => m.Move.FromSquare() == fromSq && m.Move.ToSquare() == toSq);
+
+                    // Check if move exists
+                    if (extMove.Equals(default(ExtMove)) || extMove.Move.IsNullMove())
+                    {
+                         Console.WriteLine($"[GameReplay] INVALID MOVE found at #{moveIdx}: {moveStr}. Skipping.");
+                         continue; // Skip invalid moves
+                    }
+
+                    // Get SAN
+                    var san = GetSan(tempGame, extMove.Move);
+                    
+                    // Make Move
+                    tempGame.Pos.MakeMove(extMove.Move, tempGame.Pos.State);
+                    
+                    replaySteps.Add(new ReplayStep
+                    {
+                        SanMove = san,
+                        FenAfter = tempGame.Pos.FenNotation,
+                        FromSquare = from,
+                        ToSquare = to
+                    });
+                }
+                catch (Exception moveEx)
+                {
+                    Console.WriteLine($"[GameReplay] CRASH parsing move #{moveIdx} ({moveStr}): {moveEx.Message}");
+                    // Swallow error to show partial game
+                }
+            }
+            Console.WriteLine($"[GameReplay] Parsed {replaySteps.Count} steps successfully.");
+            currentMoveIndex = 0;
+        }
+        catch (Exception ex)
+        {
+             // If initialization fails
+             errorMessage = $"FATAL PARSE ERROR: {ex.Message}";
+        }
+    }
+
+    private string GetSan(IGame tempGame, Move move)
+    {
+        // Rudzoft doesn't have a built-in "ToSan" method easily accessible?
+        // Let's do a basic construction for now or check if Move implementation has it.
+        // Actually Rudzoft might imply we need to build it.
+        // For simplicity V1: Construct Basic SAN (Piece + Capture + Destination)
+        // OR try to use a Helper if available.
+        
+        // Simple manual SAN construction for now:
+        var piece = tempGame.Pos.GetPiece(move.FromSquare());
+        var pieceType = piece.Type();
+        var isCapture = tempGame.Pos.GetPiece(move.ToSquare()) != Piece.EmptyPiece; // En passant?
+        
+        // Handle Castling
+        if (pieceType == PieceTypes.King && Math.Abs(move.ToSquare().File.Value - move.FromSquare().File.Value) > 1)
+        {
+             return move.ToSquare().File.Value > move.FromSquare().File.Value ? "O-O" : "O-O-O";
+        }
+
+        string pieceChar = "";
+        switch(pieceType)
+        {
+            case PieceTypes.Knight: pieceChar = "N"; break;
+            case PieceTypes.Bishop: pieceChar = "B"; break;
+            case PieceTypes.Rook: pieceChar = "R"; break;
+            case PieceTypes.Queen: pieceChar = "Q"; break;
+            case PieceTypes.King: pieceChar = "K"; break;
+        }
+
+        string san = pieceChar;
+        if (isCapture) san += "x";
+        san += move.ToSquare().ToString();
+        
+        // Ambiguity handling? (e.g. Nbd7) - Skip for V1
+        // Checks/Mates? (+) (#) - Skip for V1 unless easy check
+        
+        return san;
+    }
+
+    // Navigation
+
+
+}

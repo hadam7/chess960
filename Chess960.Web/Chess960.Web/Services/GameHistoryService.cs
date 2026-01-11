@@ -35,7 +35,8 @@ public class GameHistoryService
             Result = result.ToString(),
             EndReason = endReason.ToString(),
             MovesPgn = string.Join(" ", session.Moves), 
-            Fen = session.Game.Pos.FenNotation
+            Fen = session.Game.Pos.FenNotation,
+            InitialFen = session.InitialFen
         };
         
 
@@ -56,5 +57,9 @@ public class GameHistoryService
             
         Console.WriteLine($"[GameHistory] Found {games.Count} games.");
         return games;
+    }
+    public async Task<GameHistory?> GetGameByIdAsync(Guid gameId)
+    {
+        return await _context.GameHistories.FirstOrDefaultAsync(g => g.Id == gameId);
     }
 }

@@ -57,7 +57,8 @@ public class GameManager
             WhiteTimeRemainingMs = totalMilliseconds,
             BlackTimeRemainingMs = totalMilliseconds,
             IncrementMs = increment * 1000,
-            LastMoveTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            LastMoveTimestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            InitialFen = game.Pos.FenNotation
         };
 
         _games.TryAdd(gameId, session);
@@ -273,6 +274,7 @@ public class GameSession
     public string? WinnerUserId { get; set; }
     public string? DrawOfferedByUserId { get; set; } // UserId of player offering draw
     public List<string> Moves { get; set; } = new();
+    public string InitialFen { get; set; } = "";
 }
 
 public enum GameResult
