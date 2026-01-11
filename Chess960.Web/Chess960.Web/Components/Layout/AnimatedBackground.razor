@@ -1,0 +1,49 @@
+@using Chess960.Web.Client.Services
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+@rendermode InteractiveServer
+
+<div @ref="_containerRef" id="animated-bg-container" class="fixed inset-0 overflow-hidden pointer-events-none -z-10" style="background-color: rgb(var(--color-bg))">
+    <!-- Pieces will be injected here by JS -->
+    
+    <!-- Theme-aware Gradient Overlay -->
+    <div class="absolute inset-0 z-10" 
+         style="background: radial-gradient(circle at 50% 0%, rgb(var(--color-accent) / 0.45) 0%, transparent 60%), 
+                    linear-gradient(to bottom, transparent, rgb(var(--color-bg) / 0.8))"></div>
+</div>
+
+@code {
+    private IJSObjectReference? _instance;
+    private ElementReference _containerRef; // Capture DOM element
+
+    protected override bool ShouldRender() => false; // Prevent Blazor from wiping JS-added nodes
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Call global function directly with ElementReference
+                _instance = await JSRuntime.InvokeAsync<IJSObjectReference>("initAnimatedBackground", _containerRef);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AnimatedBackground] Error initializing JS: {ex.Message}");
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_instance != null)
+        {
+            try 
+            {
+                await _instance.InvokeVoidAsync("dispose");
+                await _instance.DisposeAsync();
+            }
+            catch (Exception) { /* Ignored */ }
+        }
+    }
+}

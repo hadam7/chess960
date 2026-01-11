@@ -37,6 +37,15 @@ public class ChessGameService
     public void StartGameFromFen(string fen)
     {
         Game = GameFactory.Create(fen);
+        GameOverMessage = "";
+        NotifyStateChanged();
+    }
+
+    public void Reset()
+    {
+        Game = GameFactory.Create();
+        Game.NewGame();
+        GameOverMessage = "";
         NotifyStateChanged();
     }
 

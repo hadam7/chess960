@@ -16,27 +16,48 @@
 <div class="h-[calc(100vh-4rem)] flex flex-col md:flex-row overflow-hidden animate-soft-up">
     
     <!-- LEFT: Game Area (Bars + Board) -->
-    <div class="flex-1 flex flex-col items-center justify-center p-1 gap-1">
+    <div class="flex-1 flex flex-col items-center justify-center p-2 gap-2">
         
         <!-- Opponent Bar -->
         @if (!string.IsNullOrEmpty(GameId))
         {
-            <div class="w-full max-w-[76vh] flex items-center justify-between bg-black/60 backdrop-blur-md rounded-md p-1 text-white shadow-lg border border-white/5 transition-all">
-                <div class="flex items-center gap-2">
-                     <div class="w-7 h-7 rounded bg-white/10 flex items-center justify-center border border-white/5 shadow-inner">
-                        <span class="bi bi-person-fill text-base text-white/50"></span>
+            <div class="w-full max-w-[76vh] flex items-center justify-between bg-black/40 backdrop-blur-md rounded-xl p-2 text-white shadow-2xl border-2 @(IsOpponentTurn ? "border-theme-accent/50 shadow-[0_0_20px_rgba(var(--color-accent),0.2)]" : "border-white/5") transition-all duration-500">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 shadow-inner relative overflow-hidden group flex-shrink-0">
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <span class="bi bi-person-fill text-xl text-white/40 relative z-10"></span>
                     </div>
-                    <div class="flex flex-col leading-none justify-center">
-                        <span class="font-bold text-[10px] tracking-wide text-white/90">@OpponentName</span>
-                        <span class="text-[9px] text-theme-muted font-mono">@(amIWhite ? BlackRating : WhiteRating)</span>
+                    <div class="flex flex-col min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm tracking-tight text-white/90 truncate mr-1" title="@OpponentName">@OpponentName</span>
+                            @if (IsOpponentTurn && !isGameFinished)
+                            {
+                                <div class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-pulse shadow-[0_0_8px_rgba(var(--color-accent),0.8)] flex-shrink-0"></div>
+                            }
+                        </div>
+                        <div class="flex items-center gap-2 leading-none">
+                            <span class="text-[9px] font-black uppercase tracking-widest text-theme-muted/60">Rating</span>
+                            <span class="text-[10px] text-theme-accent font-mono font-bold">@(amIWhite ? BlackRating : WhiteRating)</span>
+                            @if (isGameFinished)
+                            {
+                                var delta = amIWhite ? blackRatingDelta : whiteRatingDelta;
+                                if (delta.HasValue)
+                                {
+                                    <span class="text-[10px] @(delta >= 0 ? "text-green-400" : "text-red-400") font-bold ml-1">
+                                        @(delta >= 0 ? "+" : "")@delta
+                                    </span>
+                                }
+                            }
+                        </div>
                     </div>
                 </div>
-                <!-- Dead Pieces (Placeholder) -->
-                <div class="flex-1"></div>
                 <!-- Clock -->
-                <ChessClock TimeMs="@OpponentTimeMs" 
-                            IsRunning="@(IsOpponentTurn && !ShowGameOverModal)"
-                            Class="@(IsOpponentTurn ? "bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 text-white bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.1)]" : "bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 text-white/30")" />
+                <div class="flex items-center gap-2 ml-4">
+                    <div class="h-8 w-[1px] bg-white/5 rounded-full"></div>
+                    <ChessClock TimeMs="@OpponentTimeMs" 
+                                IsRunning="@(IsOpponentTurn && !isGameFinished)"
+                                Class="@(IsOpponentTurn && !isGameFinished ? "bg-theme-accent text-black px-3 py-1 rounded-lg font-mono text-lg font-bold tracking-widest shadow-[0_0_15px_rgba(var(--color-accent),0.4)] border border-theme-accent/50 min-w-[4.5rem] text-center" : "bg-black/40 px-3 py-1 rounded-lg font-mono text-lg font-bold tracking-widest border border-white/5 min-w-[4.5rem] text-center text-white/20")" />
+                </div>
             </div>
         }
 
@@ -76,25 +97,26 @@
                         </div>
         
                         <!-- Text -->
-                        <h2 class="text-3xl font-black italic tracking-tighter mb-1 text-white uppercase drop-shadow-md">
-                            @(IsVictory ? "GYŐZELEM!" : (GameOverMessage ?? "JÁTÉK VÉGE"))
+                        <h2 class="text-4xl font-black italic tracking-tighter mb-1 text-white uppercase drop-shadow-md">
+                            @(IsVictory ? "GYŐZELEM!" : (IsDraw ? "DÖNTETLEN" : "VERESÉG"))
                         </h2>
                         
-                        <div class="h-1 w-12 @(IsVictory ? "bg-green-500" : (IsDraw ? "bg-gray-500" : "bg-red-500")) rounded-full mb-3"></div>
+                        <div class="h-1 w-12 @(IsVictory ? "bg-green-500" : (IsDraw ? "bg-gray-500" : "bg-red-500")) rounded-full mb-4"></div>
         
-                        <p class="text-white/60 font-medium text-xs uppercase tracking-widest mb-6">
+                        <p class="text-white/50 font-bold text-[10px] uppercase tracking-[0.3em] mb-6">
                             @GameOverSubtext
                         </p>
 
                         <!-- Rating Change -->
                         @if (NewRating.HasValue && RatingChange.HasValue)
                         {
-                            <div class="mb-6 flex flex-col items-center animate-in slide-in-from-bottom-2 delay-100 duration-500">
-                                <div class="text-4xl font-extrabold text-white tracking-widest drop-shadow-lg">
+                            <div class="mb-8 flex flex-col items-center animate-in slide-in-from-bottom-2 delay-100 duration-700">
+                                <div class="text-5xl font-extrabold text-white tracking-widest drop-shadow-lg mb-1">
                                     @NewRating
                                 </div>
-                                <div class="text-xs font-bold uppercase tracking-widest flex items-center gap-1 @(RatingChange >= 0 ? "text-green-400" : "text-red-400")">
-                                    @(RatingChange >= 0 ? "+" : "")@RatingChange
+                                <div class="text-[11px] font-black uppercase tracking-[0.2em] flex items-center gap-2 @(RatingChange >= 0 ? "text-green-400" : "text-red-400")">
+                                    <span class="opacity-50">Rating</span>
+                                    <span>@(RatingChange >= 0 ? "+" : "")@RatingChange</span>
                                     <span class="bi @(RatingChange >= 0 ? "bi-graph-up-arrow" : "bi-graph-down-arrow")"></span>
                                 </div>
                             </div>
@@ -118,22 +140,43 @@
         <!-- Player Bar -->
         @if (!string.IsNullOrEmpty(GameId))
         {
-            <div class="w-full max-w-[76vh] flex items-center justify-between bg-black/60 backdrop-blur-md rounded-md p-1 text-white shadow-lg border border-white/5 transition-all">
-                <div class="flex items-center gap-2">
-                     <div class="w-7 h-7 rounded bg-theme-accent text-black flex items-center justify-center shadow-[0_0_10px_rgba(var(--color-accent),0.3)]">
-                        <span class="bi bi-person-fill text-base"></span>
+            <div class="w-full max-w-[76vh] flex items-center justify-between bg-black/40 backdrop-blur-md rounded-xl p-2 text-white shadow-2xl border-2 @(IsMyTurn ? "border-theme-accent/50 shadow-[0_0_20px_rgba(var(--color-accent),0.2)]" : "border-white/5") transition-all duration-500">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div class="w-9 h-9 rounded-lg bg-theme-accent flex items-center justify-center shadow-[0_0_15px_rgba(var(--color-accent),0.3)] relative overflow-hidden group flex-shrink-0">
+                        <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <span class="bi bi-person-fill text-xl text-black relative z-10"></span>
                     </div>
-                    <div class="flex flex-col leading-none justify-center">
-                        <span class="font-bold text-[10px] tracking-wide text-white/90">@CurrentUserName</span>
-                        <span class="text-[9px] text-theme-muted font-mono">@(amIWhite ? WhiteRating : BlackRating)</span>
+                    <div class="flex flex-col min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm tracking-tight text-white/90 truncate mr-1" title="@CurrentUserName">@CurrentUserName</span>
+                            @if (IsMyTurn && !isGameFinished)
+                            {
+                                <div class="w-1.5 h-1.5 bg-theme-accent rounded-full animate-pulse shadow-[0_0_8px_rgba(var(--color-accent),0.8)] flex-shrink-0"></div>
+                            }
+                        </div>
+                        <div class="flex items-center gap-2 leading-none">
+                            <span class="text-[9px] font-black uppercase tracking-widest text-theme-muted/60">Rating</span>
+                            <span class="text-[10px] text-theme-accent font-mono font-bold">@(amIWhite ? WhiteRating : BlackRating)</span>
+                            @if (isGameFinished)
+                            {
+                                var delta = amIWhite ? whiteRatingDelta : blackRatingDelta;
+                                if (delta.HasValue)
+                                {
+                                    <span class="text-[10px] @(delta >= 0 ? "text-green-400" : "text-red-400") font-bold ml-1">
+                                        @(delta >= 0 ? "+" : "")@delta
+                                    </span>
+                                }
+                            }
+                        </div>
                     </div>
                 </div>
-                 <!-- Dead Pieces (Placeholder) -->
-                <div class="flex-1"></div>
-                 <!-- Clock -->
-                 <ChessClock TimeMs="@MyTimeMs" 
-                            IsRunning="@(IsMyTurn && !ShowGameOverModal)"
-                            Class="@(IsMyTurn ? "bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]" : "bg-black/40 px-2 py-0.5 rounded font-mono text-base font-bold tracking-widest shadow-inner border border-white/5 min-w-[3.5rem] text-center flex items-center justify-center h-7 text-white/30")" />
+                <!-- Clock -->
+                <div class="flex items-center gap-2 ml-4">
+                    <div class="h-8 w-[1px] bg-white/5 rounded-full"></div>
+                    <ChessClock TimeMs="@MyTimeMs" 
+                                IsRunning="@(IsMyTurn && !isGameFinished)"
+                                Class="@(IsMyTurn && !isGameFinished ? "bg-white text-black px-3 py-1 rounded-lg font-mono text-lg font-bold tracking-widest shadow-[0_0_20px_rgba(255,255,255,0.3)] border border-white/50 min-w-[4.5rem] text-center" : "bg-black/40 px-3 py-1 rounded-lg font-mono text-lg font-bold tracking-widest border border-white/5 min-w-[4.5rem] text-center text-white/20")" />
+                </div>
             </div>
         }
     </div>
@@ -409,6 +452,9 @@
     private bool ShowGameOverModal = false;
     private bool IsVictory = false;
     private bool IsDraw = false;
+    private bool isGameFinished = false;
+    private int? whiteRatingDelta;
+    private int? blackRatingDelta;
 
     // ...
 
@@ -441,6 +487,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Reset state from previous games
+        if (string.IsNullOrEmpty(GameId))
+        {
+            GameService.Reset();
+        }
+
         // Auth check
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
@@ -606,6 +658,8 @@
 
     private async Task HandleLocalMove((string from, string to) move)
     {
+        if (isGameFinished) return;
+
         Console.WriteLine($"[Client] HandleLocalMove: {move.from} -> {move.to}. GameId: {GameId}");
         if (!string.IsNullOrEmpty(GameId))
         {
@@ -704,13 +758,16 @@
 
     private void HandleGameOver(string winnerId, string reason, string fen, int? wRating, int? bRating, int? wDelta, int? bDelta)
     {
-          // if (clockTimer != null) clockTimer.Dispose(); // Stop timer -- handled by IsRunning props
+          isGameFinished = true;
           ShowGameOverModal = true;
          
          // Update board one last time to show final position (e.g. mate)
          GameService.StartGameFromFen(fen);
 
          // Set Rating info
+         whiteRatingDelta = wDelta;
+         blackRatingDelta = bDelta;
+
          if (amIWhite)
          {
              NewRating = wRating;

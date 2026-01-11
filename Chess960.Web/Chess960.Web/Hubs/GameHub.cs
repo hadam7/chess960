@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Chess960.Web.Services;
 
-namespace Chess960.Web.Hubs;
+namespace Chess960.Web.Services;
 
 public class GameHub : Hub
 {

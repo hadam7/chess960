@@ -87,6 +87,7 @@
         {
             Console.WriteLine($"[ChessBoard] OverlayFen update: {OverlayFen}");
         }
+        UpdateBoardCache();
     }
 
     public void Dispose()
@@ -97,33 +98,57 @@
 
     [Parameter] public string? OverlayFen { get; set; }
 
-    // ... existing parameters ...
+    private char[,] currentBoard = new char[8, 8];
+    private string lastFen = "";
 
-    private char GetPieceAt(int file, int rank)
+    private void UpdateBoardCache()
     {
-        // Use OverlayFen if provided, otherwise live game FEN
         var fen = !string.IsNullOrEmpty(OverlayFen) ? OverlayFen : GameService.GetFen();
-        if (string.IsNullOrEmpty(fen)) return ' ';
+        if (fen != lastFen)
+        {
+            lastFen = fen;
+            ParseFenToBoard(fen);
+        }
+    }
+
+    private void ParseFenToBoard(string fen)
+    {
+        // Clear board
+        for (int i = 0; i < 8; i++)
+            for (int j = 0; j < 8; j++)
+                currentBoard[i, j] = ' ';
+
+        if (string.IsNullOrEmpty(fen)) return;
 
         var parts = fen.Split(' ');
         var ranks = parts[0].Split('/');
         
-        if (ranks.Length != 8) return ' ';
+        if (ranks.Length != 8) return;
 
-        var rankString = ranks[7 - rank];
-        
-        int currentFile = 0;
-        foreach (var c in rankString)
+        for (int rank = 0; rank < 8; rank++)
         {
-            if (char.IsDigit(c))
+            var rankString = ranks[7 - rank];
+            int file = 0;
+            foreach (var c in rankString)
             {
-                currentFile += (int)char.GetNumericValue(c);
+                if (char.IsDigit(c))
+                {
+                    file += (int)char.GetNumericValue(c);
+                }
+                else
+                {
+                    if (file < 8) currentBoard[file, rank] = c;
+                    file++;
+                }
             }
-            else
-            {
-                if (currentFile == file) return c;
-                currentFile++;
-            }
+        }
+    }
+
+    private char GetPieceAt(int file, int rank)
+    {
+        if (file >= 0 && file < 8 && rank >= 0 && rank < 8)
+        {
+            return currentBoard[file, rank];
         }
         return ' ';
     }

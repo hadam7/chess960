@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.Components;
 
-namespace Chess960.Web.Client.Services;
+namespace Chess960.Web.Services;
 
 public class MultiplayerService : IAsyncDisposable
 {

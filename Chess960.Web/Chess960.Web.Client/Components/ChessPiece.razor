@@ -15,8 +15,12 @@
 {
      var colorPrefix = IsWhite ? "w" : "b";
      var pieceSuffix = char.ToUpper(PieceType).ToString();
-     var src = $"/images/pieces/{Theme}/{colorPrefix}{pieceSuffix}.svg";
-     <img src="@src" class="w-full h-full pb-1" style="@($"opacity: {opacity}; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));")" draggable="false" />
+     
+     if (PieceType != ' ' && PieceType != 0)
+     {
+        var src = $"/images/pieces/{Theme}/{colorPrefix}{pieceSuffix}.svg";
+        <img src="@src" class="w-full h-full pb-1" style="@($"opacity: {opacity}; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));")" draggable="false" />
+     }
 }
 else
 {

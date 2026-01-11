@@ -7,7 +7,8 @@
 @layer base {
     :root {
         /* Default Theme: Neon Green */
-        --color-bg: 5 5 5;
+        --color-bg: 3 15 10;
+        /* Dark green tint */
         --color-surface: 255 255 255;
         --color-accent: 0 255 157;
         --color-text: 240 253 244;
@@ -51,10 +52,9 @@
     }
 
     body {
-        background-color: rgb(var(--color-bg));
+        background-color: transparent;
         color: rgb(var(--color-text));
         @apply selection:bg-theme-accent selection:text-black overflow-x-hidden;
-        background-image: radial-gradient(circle at 50% 0%, rgba(var(--gradient-end), 0.15) 0%, rgb(var(--color-bg)) 60%);
         background-attachment: fixed;
         transition: background-color 0.5s ease, color 0.5s ease;
     }
@@ -71,7 +71,8 @@
 }
 
 [data-theme="gold"] {
-    --color-bg: 8 8 8;
+    --color-bg: 15 10 5;
+    /* Dark gold/amber tint */
     --color-surface: 255 255 255;
     --color-accent: 251 191 36;
     /* Amber 400 */
@@ -83,7 +84,8 @@
 }
 
 [data-theme="blue"] {
-    --color-bg: 2 6 23;
+    --color-bg: 5 10 25;
+    /* Dark blue tint */
     --color-surface: 255 255 255;
     --color-accent: 34 211 238;
     /* Cyan 400 */
@@ -95,7 +97,8 @@
 }
 
 [data-theme="purple"] {
-    --color-bg: 15 5 24;
+    --color-bg: 12 5 20;
+    /* Dark purple tint */
     --color-surface: 255 255 255;
     --color-accent: 217 70 239;
     /* Fuchsia 500 */
@@ -152,4 +155,31 @@
 
 ::-webkit-scrollbar-thumb {
     @apply bg-white/10 rounded-full hover:bg-theme-accent/50;
+}
+
+@keyframes float-up {
+    0% {
+        transform: translateY(100vh) rotate(0deg) scale(0.8);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: var(--target-opacity, 0.2);
+    }
+
+    80% {
+        opacity: var(--target-opacity, 0.2);
+    }
+
+    100% {
+        transform: translateY(-20vh) rotate(360deg) scale(1.1);
+        opacity: 0;
+    }
+}
+
+.animate-float-up {
+    animation-name: float-up;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    will-change: transform, opacity;
 }

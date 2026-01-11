@@ -56,7 +56,7 @@ builder.Services.AddSingleton<Chess960.Web.Services.GameManager>();
 builder.Services.AddScoped<Chess960.Web.Services.EloService>();
 builder.Services.AddScoped<Chess960.Web.Services.GameHistoryService>();
 builder.Services.AddScoped<Chess960.Web.Services.GameHistoryService>();
-builder.Services.AddScoped<Chess960.Web.Client.Services.MultiplayerService>();
+builder.Services.AddScoped<Chess960.Web.Services.MultiplayerService>();
 builder.Services.AddScoped<Chess960.Web.Client.Services.PieceThemeService>();
 builder.Services.AddScoped(sp => new HttpClient());
 
@@ -97,6 +97,6 @@ app.MapRazorComponents<App>()
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
-app.MapHub<Chess960.Web.Hubs.GameHub>("/gamehub");
+app.MapHub<Chess960.Web.Services.GameHub>("/gamehub");
 
 app.Run();

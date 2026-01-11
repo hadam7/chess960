@@ -1,10 +1,10 @@
 ﻿@inherits LayoutComponentBase
 
 <div class="min-h-screen flex flex-col md:flex-row relative overflow-hidden">
+    <!-- Global Animated Background -->
+    <AnimatedBackground />
     
-    <!-- Organic Background Elements -->
-    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-theme-accent/20 rounded-full blur-[100px] pointer-events-none animate-float-slow"></div>
-    <div class="absolute bottom-[10%] right-[-5%] w-[30%] h-[30%] bg-theme-glow/10 rounded-full blur-[80px] pointer-events-none animate-float-slow" style="animation-delay: 2s;"></div>
+
 
     <!-- Sidebar -->
     <NavMenu />
@@ -18,7 +18,7 @@
             </div>
         </div>
 
-        <article class="flex-1 overflow-x-hidden overflow-y-auto bg-black custom-scrollbar p-6">
+        <article class="flex-1 overflow-x-hidden overflow-y-auto bg-transparent custom-scrollbar p-6">
             @Body
         </article>
     </main>

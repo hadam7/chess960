@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.AspNetCore.Components.Authorization;
 using Chess960.Web.Client.Services;
+using Chess960.Web.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
