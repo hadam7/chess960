@@ -20,8 +20,8 @@ module.exports = {
           glow: 'rgb(var(--color-glow) / <alpha-value>)',
         },
         'board': {
-          white: '#f0fdf4',   // Mint 50
-          black: '#064e3b',   // Emerald 900
+          white: 'var(--board-white)',
+          black: 'var(--board-black)',
           accent: 'rgb(var(--color-accent) / <alpha-value>)',
         }
       },

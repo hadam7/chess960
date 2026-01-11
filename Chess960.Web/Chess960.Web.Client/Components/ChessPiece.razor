@@ -1,41 +1,87 @@
 @namespace Chess960.Web.Client.Components
+@{
+    // Theme-based styles can be applied via class or inline styles/defs
+    string filterId = "";
+    if (Theme == "neon") filterId = IsWhite ? "filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px #0f0);" : "filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 5px #f00);";
+    if (Theme == "gold") filterId = "filter: sepia(1) saturate(5) hue-rotate(45deg);"; // Simple gold effect via CSS filter
+    // filterId is now calculated within the rendering block based on theme
+    
+    // Glass effect could be opacity + stroke
+    string opacity = Theme == "glass" ? "0.7" : "1";
+    string strokeWidth = Theme == "glass" ? "2" : "1.5";
+}
 
-<div class="@Class" style="cursor: pointer;">
-    <svg viewBox="0 0 45 45" class="w-full h-full">
-        @if (PieceType != ' ' && PieceType != 0)
-        {
-            @((MarkupString)GetPieceSvg(PieceType, IsWhite))
-        }
-    </svg>
-</div>
+@if (Theme == "cburnett" || Theme == "alpha" || Theme == "merida" || Theme == "leipzig" || Theme == "maestro" || Theme == "cardinal")
+{
+     var colorPrefix = IsWhite ? "w" : "b";
+     var pieceSuffix = char.ToUpper(PieceType).ToString();
+     var src = $"/images/pieces/{Theme}/{colorPrefix}{pieceSuffix}.svg";
+     <img src="@src" class="w-full h-full pb-1" style="@($"opacity: {opacity}; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));")" draggable="false" />
+}
+else
+{
+    // Existing inline SVG logic
+    string svgFilterId = "";
+    if (Theme == "neon") svgFilterId = IsWhite ? "filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 5px #0f0);" : "filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 5px #f00);";
+    if (Theme == "gold") svgFilterId = "filter: sepia(1) saturate(5) hue-rotate(45deg);"; // Simple gold effect via CSS filter
+    
+    <div class="@Class" style="cursor: pointer; @svgFilterId opacity: @opacity;">
+        <svg viewBox="0 0 45 45" class="w-full h-full" style="@(Theme == "standard" ? "transform: scale(1.25); transform-origin: center;" : "")">
+            @if (PieceType != ' ' && PieceType != 0)
+            {
+                @((MarkupString)GetPieceSvg(PieceType, IsWhite, Theme))
+            }
+        </svg>
+    </div>
+}
 
 @code {
     [Parameter] public char PieceType { get; set; } // P, N, B, R, Q, K
     [Parameter] public bool IsWhite { get; set; }
     [Parameter] public string Class { get; set; } = "";
+    [Parameter] public string Theme { get; set; } = "standard";
 
-    private string GetPieceSvg(char type, bool white)
+    private string GetPieceSvg(char type, bool white, string theme)
     {
+        // Colors
+        string fillWhite = "#fff";
+        string strokeWhite = "#000";
+        string fillBlack = "#000";
+        string strokeBlack = "#fff";
+
+        if (theme == "neon")
+        {
+             fillWhite = "#e0ffe0"; strokeWhite = "#0f0";
+             fillBlack = "#200000"; strokeBlack = "#f00";
+        }
+        else if (theme == "glass")
+        {
+             fillWhite = "rgba(255,255,255,0.3)"; strokeWhite = "#fff";
+             fillBlack = "rgba(0,0,0,0.5)"; strokeBlack = "#aaa";
+        }
+        
+        // Standard Geometry with Dynamic Colors (Fallback / Standard)
+        // Scaled up slightly to match image sets (transform scale)
         return char.ToUpper(type) switch
         {
             'P' => white 
-                ? "<path d=\"M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z\" stroke=\"#000\" stroke-width=\"1.5\" fill=\"#fff\" />"
-                : "<path d=\"M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z\" stroke=\"#fff\" stroke-width=\"1.5\" fill=\"#000\" />",
+                ? $"<path d=\"M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z\" stroke=\"{strokeWhite}\" stroke-width=\"1.5\" fill=\"{fillWhite}\" />"
+                : $"<path d=\"M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z\" stroke=\"{strokeBlack}\" stroke-width=\"1.5\" fill=\"{fillBlack}\" />",
             'R' => white
-                ? "<g fill=\"#fff\" fill-rule=\"evenodd\" stroke=\"#000\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 39h27v-3H9v3zM12 36v-4h21v4H12zM11 14V9h4v2h5V9h5v2h5V9h4v5\" stroke-linecap=\"butt\"/><path d=\"M34 14l-3 3H14l-3-3\"/><path d=\"M31 17v12.5H14V17\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\"/><path d=\"M31 29.5l1.5 2.5h-20l1.5-2.5\"/><path d=\"M11 14h23\" fill=\"none\" stroke-linejoin=\"miter\"/></g>"
-                : "<g fill=\"#000\" fill-rule=\"evenodd\" stroke=\"#fff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 39h27v-3H9v3zM12 36v-4h21v4H12zM11 14V9h4v2h5V9h5v2h5V9h4v5\" stroke-linecap=\"butt\"/><path d=\"M34 14l-3 3H14l-3-3\"/><path d=\"M31 17v12.5H14V17\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\"/><path d=\"M31 29.5l1.5 2.5h-20l1.5-2.5\"/><path d=\"M11 14h23\" fill=\"none\" stroke-linejoin=\"miter\"/></g>",
+                ? $"<g fill=\"{fillWhite}\" fill-rule=\"evenodd\" stroke=\"{strokeWhite}\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 39h27v-3H9v3zM12 36v-4h21v4H12zM11 14V9h4v2h5V9h5v2h5V9h4v5\" stroke-linecap=\"butt\"/><path d=\"M34 14l-3 3H14l-3-3\"/><path d=\"M31 17v12.5H14V17\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\"/><path d=\"M31 29.5l1.5 2.5h-20l1.5-2.5\"/><path d=\"M11 14h23\" fill=\"none\" stroke-linejoin=\"miter\"/></g>"
+                : $"<g fill=\"{fillBlack}\" fill-rule=\"evenodd\" stroke=\"{strokeBlack}\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 39h27v-3H9v3zM12 36v-4h21v4H12zM11 14V9h4v2h5V9h5v2h5V9h4v5\" stroke-linecap=\"butt\"/><path d=\"M34 14l-3 3H14l-3-3\"/><path d=\"M31 17v12.5H14V17\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\"/><path d=\"M31 29.5l1.5 2.5h-20l1.5-2.5\"/><path d=\"M11 14h23\" fill=\"none\" stroke-linejoin=\"miter\"/></g>",
             'N' => white
-                ? "<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"#000\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18\" style=\"fill:#ffffff; stroke:#000000;\" /><path d=\"M 24,18 C 24.38,20.91 18.45,25.37 16,27 C 13,29 13.18,31.34 11,31 C 9.958,30.06 12.41,27.96 11,28 C 10,28 11.19,29.23 10,30 C 9,30 5.997,31 6,26 C 6,24 12,14 12,14 C 12,14 13.89,12.1 14,10.5 C 13.27,9.506 13.5,8.5 13.5,7.5 C 14.5,6.5 16.5,10 16.5,10 L 18.5,10 C 18.5,10 19.28,8.008 21,7 C 22,7 22,10 22,10\" style=\"fill:#ffffff; stroke:#000000;\" /><path d=\"M 9.5 25.5 A 0.5 0.5 0 1 1 8.5,25.5 A 0.5 0.5 0 1 1 9.5 25.5 z\" style=\"fill:#000000; stroke:#000000;\" /><path d=\"M 15 15.5 A 0.5 1.5 0 1 1 14,15.5 A 0.5 1.5 0 1 1 15 15.5 z\" transform=\"matrix(0.866,0.5,-0.5,0.866,9.693,-5.173)\" style=\"fill:#000000; stroke:#000000;\" /></g>"
-                : "<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"#fff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18\" style=\"fill:#000000; stroke:#ffffff;\" /><path d=\"M 24,18 C 24.38,20.91 18.45,25.37 16,27 C 13,29 13.18,31.34 11,31 C 9.958,30.06 12.41,27.96 11,28 C 10,28 11.19,29.23 10,30 C 9,30 5.997,31 6,26 C 6,24 12,14 12,14 C 12,14 13.89,12.1 14,10.5 C 13.27,9.506 13.5,8.5 13.5,7.5 C 14.5,6.5 16.5,10 16.5,10 L 18.5,10 C 18.5,10 19.28,8.008 21,7 C 22,7 22,10 22,10\" style=\"fill:#000000; stroke:#ffffff;\" /><path d=\"M 9.5 25.5 A 0.5 0.5 0 1 1 8.5,25.5 A 0.5 0.5 0 1 1 9.5 25.5 z\" style=\"fill:#ffffff; stroke:#ffffff;\" /><path d=\"M 15 15.5 A 0.5 1.5 0 1 1 14,15.5 A 0.5 1.5 0 1 1 15 15.5 z\" transform=\"matrix(0.866,0.5,-0.5,0.866,9.693,-5.173)\" style=\"fill:#ffffff; stroke:#ffffff;\" /></g>",
+                ? $"<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"{strokeWhite}\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18\" style=\"fill:{fillWhite}; stroke:{strokeWhite};\" /><path d=\"M 24,18 C 24.38,20.91 18.45,25.37 16,27 C 13,29 13.18,31.34 11,31 C 9.958,30.06 12.41,27.96 11,28 C 10,28 11.19,29.23 10,30 C 9,30 5.997,31 6,26 C 6,24 12,14 12,14 C 12,14 13.89,12.1 14,10.5 C 13.27,9.506 13.5,8.5 13.5,7.5 C 14.5,6.5 16.5,10 16.5,10 L 18.5,10 C 18.5,10 19.28,8.008 21,7 C 22,7 22,10 22,10\" style=\"fill:{fillWhite}; stroke:{strokeWhite};\" /><path d=\"M 9.5 25.5 A 0.5 0.5 0 1 1 8.5,25.5 A 0.5 0.5 0 1 1 9.5 25.5 z\" style=\"fill:{strokeWhite}; stroke:{strokeWhite};\" /><path d=\"M 15 15.5 A 0.5 1.5 0 1 1 14,15.5 A 0.5 1.5 0 1 1 15 15.5 z\" transform=\"matrix(0.866,0.5,-0.5,0.866,9.693,-5.173)\" style=\"fill:{strokeWhite}; stroke:{strokeWhite};\" /></g>"
+                : $"<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"{strokeBlack}\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18\" style=\"fill:{fillBlack}; stroke:{strokeBlack};\" /><path d=\"M 24,18 C 24.38,20.91 18.45,25.37 16,27 C 13,29 13.18,31.34 11,31 C 9.958,30.06 12.41,27.96 11,28 C 10,28 11.19,29.23 10,30 C 9,30 5.997,31 6,26 C 6,24 12,14 12,14 C 12,14 13.89,12.1 14,10.5 C 13.27,9.506 13.5,8.5 13.5,7.5 C 14.5,6.5 16.5,10 16.5,10 L 18.5,10 C 18.5,10 19.28,8.008 21,7 C 22,7 22,10 22,10\" style=\"fill:{fillBlack}; stroke:{strokeBlack};\" /><path d=\"M 9.5 25.5 A 0.5 0.5 0 1 1 8.5,25.5 A 0.5 0.5 0 1 1 9.5 25.5 z\" style=\"fill:{strokeBlack}; stroke:{strokeBlack};\" /><path d=\"M 15 15.5 A 0.5 1.5 0 1 1 14,15.5 A 0.5 1.5 0 1 1 15 15.5 z\" transform=\"matrix(0.866,0.5,-0.5,0.866,9.693,-5.173)\" style=\"fill:{strokeBlack}; stroke:{strokeBlack};\" /></g>",
             'B' => white
-                ? "<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"#000\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"#fff\" stroke-linecap=\"butt\"><path d=\"M9 36c3.39-.97 9.11-1.45 13.5-1.45 4.38 0 10.11.48 13.5 1.45V30H9v6z\"/><path d=\"M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z\"/><path d=\"M25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 1 1 5 0z\"/></g><path d=\"M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5\" stroke-linejoin=\"miter\"/></g>"
-                : "<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"#fff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"#000\" stroke-linecap=\"butt\"><path d=\"M9 36c3.39-.97 9.11-1.45 13.5-1.45 4.38 0 10.11.48 13.5 1.45V30H9v6z\"/><path d=\"M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z\"/><path d=\"M25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 1 1 5 0z\"/></g><path d=\"M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5\" stroke-linejoin=\"miter\"/></g>",
+                ? $"<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"{strokeWhite}\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"{fillWhite}\" stroke-linecap=\"butt\"><path d=\"M9 36c3.39-.97 9.11-1.45 13.5-1.45 4.38 0 10.11.48 13.5 1.45V30H9v6z\"/><path d=\"M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z\"/><path d=\"M25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 1 1 5 0z\"/></g><path d=\"M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5\" stroke-linejoin=\"miter\"/></g>"
+                : $"<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"{strokeBlack}\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><g fill=\"{fillBlack}\" stroke-linecap=\"butt\"><path d=\"M9 36c3.39-.97 9.11-1.45 13.5-1.45 4.38 0 10.11.48 13.5 1.45V30H9v6z\"/><path d=\"M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z\"/><path d=\"M25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 1 1 5 0z\"/></g><path d=\"M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5\" stroke-linejoin=\"miter\"/></g>",
             'Q' => white
-                ? "<g fill=\"#fff\" fill-rule=\"evenodd\" stroke=\"#000\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 26c8.5-1.5 21-1.5 27 0l2.5-12.5L31 25l-.3-14.1L25.5 24.5l-3-14.5-3 14.5-5.2-13.6L14 25 6.5 13.5 9 26z\" stroke-linecap=\"butt\"/><path d=\"M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1 2.5-1 2.5-1.5 1.5 0 2.5 0 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z\" stroke-linecap=\"butt\"/><path d=\"M11.5 30c3.5-1 18.5-1 22 0M12 33.5c6-1 15-1 21 0\" fill=\"none\"/><circle cx=\"6\" cy=\"12\" r=\"2\"/><circle cx=\"14\" cy=\"9\" r=\"2\"/><circle cx=\"22.5\" cy=\"8\" r=\"2\"/><circle cx=\"31\" cy=\"9\" r=\"2\"/><circle cx=\"39\" cy=\"12\" r=\"2\"/><path d=\"M11 38.5a35 35 1 0 0 23 0\" fill=\"none\" stroke-linecap=\"butt\"/><path d=\"M11 29a35 35 1 0 1 23 0M12.5 31.5h20M11.5 34.5a35 35 1 0 0 22 0M10.5 37.5a35 35 1 0 0 24 0\" fill=\"none\" stroke=\"#fff\"/></g>"
-                : "<g fill=\"#000\" fill-rule=\"evenodd\" stroke=\"#000\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 26c8.5-1.5 21-1.5 27 0l2.5-12.5L31 25l-.3-14.1L25.5 24.5l-3-14.5-3 14.5-5.2-13.6L14 25 6.5 13.5 9 26z\" stroke-linecap=\"butt\"/><path d=\"M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1 2.5-1 2.5-1.5 1.5 0 2.5 0 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z\" stroke-linecap=\"butt\"/><path d=\"M11.5 30c3.5-1 18.5-1 22 0M12 33.5c6-1 15-1 21 0\" fill=\"none\" stroke=\"#fff\"/><circle cx=\"6\" cy=\"12\" r=\"2\"/><circle cx=\"14\" cy=\"9\" r=\"2\"/><circle cx=\"22.5\" cy=\"8\" r=\"2\"/><circle cx=\"31\" cy=\"9\" r=\"2\"/><circle cx=\"39\" cy=\"12\" r=\"2\"/><path d=\"M11 38.5a35 35 1 0 0 23 0\" fill=\"none\" stroke=\"#fff\" stroke-linecap=\"butt\"/><path d=\"M11 29a35 35 1 0 1 23 0M12.5 31.5h20M11.5 34.5a35 35 1 0 0 22 0M10.5 37.5a35 35 1 0 0 24 0\" fill=\"none\" stroke=\"#fff\"/></g>",
+                ? $"<g fill=\"{fillWhite}\" fill-rule=\"evenodd\" stroke=\"{strokeWhite}\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 26c8.5-1.5 21-1.5 27 0l2.5-12.5L31 25l-.3-14.1L25.5 24.5l-3-14.5-3 14.5-5.2-13.6L14 25 6.5 13.5 9 26z\" stroke-linecap=\"butt\"/><path d=\"M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1 2.5-1 2.5-1.5 1.5 0 2.5 0 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z\" stroke-linecap=\"butt\"/><path d=\"M11.5 30c3.5-1 18.5-1 22 0M12 33.5c6-1 15-1 21 0\" fill=\"none\"/><circle cx=\"6\" cy=\"12\" r=\"2\"/><circle cx=\"14\" cy=\"9\" r=\"2\"/><circle cx=\"22.5\" cy=\"8\" r=\"2\"/><circle cx=\"31\" cy=\"9\" r=\"2\"/><circle cx=\"39\" cy=\"12\" r=\"2\"/><path d=\"M11 38.5a35 35 1 0 0 23 0\" fill=\"none\" stroke-linecap=\"butt\"/><path d=\"M11 29a35 35 1 0 1 23 0M12.5 31.5h20M11.5 34.5a35 35 1 0 0 22 0M10.5 37.5a35 35 1 0 0 24 0\" fill=\"none\" stroke=\"{strokeWhite}\"/></g>"
+                : $"<g fill=\"{fillBlack}\" fill-rule=\"evenodd\" stroke=\"{strokeBlack}\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 26c8.5-1.5 21-1.5 27 0l2.5-12.5L31 25l-.3-14.1L25.5 24.5l-3-14.5-3 14.5-5.2-13.6L14 25 6.5 13.5 9 26z\" stroke-linecap=\"butt\"/><path d=\"M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1 2.5-1 2.5-1.5 1.5 0 2.5 0 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z\" stroke-linecap=\"butt\"/><path d=\"M11.5 30c3.5-1 18.5-1 22 0M12 33.5c6-1 15-1 21 0\" fill=\"none\" stroke=\"{strokeBlack}\"/><circle cx=\"6\" cy=\"12\" r=\"2\"/><circle cx=\"14\" cy=\"9\" r=\"2\"/><circle cx=\"22.5\" cy=\"8\" r=\"2\"/><circle cx=\"31\" cy=\"9\" r=\"2\"/><circle cx=\"39\" cy=\"12\" r=\"2\"/><path d=\"M11 38.5a35 35 1 0 0 23 0\" fill=\"none\" stroke=\"{strokeBlack}\" stroke-linecap=\"butt\"/><path d=\"M11 29a35 35 1 0 1 23 0M12.5 31.5h20M11.5 34.5a35 35 1 0 0 22 0M10.5 37.5a35 35 1 0 0 24 0\" fill=\"none\" stroke=\"{strokeBlack}\"/></g>",
             'K' => white
-                ? "<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"#000\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22.5 11.63V6M20 8h5\" stroke-linejoin=\"miter\"/><path d=\"M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5\" fill=\"#fff\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\"/><path d=\"M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-1-5 2-8 2s-4-3-8-3-4 3-8 3-5-2-8-2c-3 6 6 10.5 6 10.5v7z\" fill=\"#fff\"/><path d=\"M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0\"/></g>"
-                : "<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"#fff\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22.5 11.63V6M20 8h5\" stroke-linejoin=\"miter\"/><path d=\"M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5\" fill=\"#000\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\"/><path d=\"M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-1-5 2-8 2s-4-3-8-3-4 3-8 3-5-2-8-2c-3 6 6 10.5 6 10.5v7z\" fill=\"#000\"/><path d=\"M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0\"/></g>",
+                ? $"<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"{strokeWhite}\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22.5 11.63V6M20 8h5\" stroke-linejoin=\"miter\"/><path d=\"M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5\" fill=\"{fillWhite}\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\"/><path d=\"M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-1-5 2-8 2s-4-3-8-3-4 3-8 3-5-2-8-2c-3 6 6 10.5 6 10.5v7z\" fill=\"{fillWhite}\"/><path d=\"M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0\"/></g>"
+                : $"<g fill=\"none\" fill-rule=\"evenodd\" stroke=\"{strokeBlack}\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M22.5 11.63V6M20 8h5\" stroke-linejoin=\"miter\"/><path d=\"M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5\" fill=\"{fillBlack}\" stroke-linecap=\"butt\" stroke-linejoin=\"miter\"/><path d=\"M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-1-5 2-8 2s-4-3-8-3-4 3-8 3-5-2-8-2c-3 6 6 10.5 6 10.5v7z\" fill=\"{fillBlack}\"/><path d=\"M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0\"/></g>",
             _ => ""
         };
     }

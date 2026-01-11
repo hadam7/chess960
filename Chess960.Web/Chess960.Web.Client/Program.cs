@@ -12,5 +12,6 @@ builder.Services.AddAuthenticationStateDeserialization();
 
 builder.Services.AddScoped<ChessGameService>();
 builder.Services.AddScoped<MultiplayerService>();
+builder.Services.AddScoped<PieceThemeService>();
 
 await builder.Build().RunAsync();

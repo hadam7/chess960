@@ -29,6 +29,15 @@ namespace Chess960.Web.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("EloBlitz")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("EloBullet")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("EloRapid")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("EloRating")
                         .HasColumnType("INTEGER");
 

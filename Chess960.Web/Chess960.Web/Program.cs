@@ -57,6 +57,7 @@ builder.Services.AddScoped<Chess960.Web.Services.EloService>();
 builder.Services.AddScoped<Chess960.Web.Services.GameHistoryService>();
 builder.Services.AddScoped<Chess960.Web.Services.GameHistoryService>();
 builder.Services.AddScoped<Chess960.Web.Client.Services.MultiplayerService>();
+builder.Services.AddScoped<Chess960.Web.Client.Services.PieceThemeService>();
 builder.Services.AddScoped(sp => new HttpClient());
 
 var app = builder.Build();
@@ -81,12 +82,12 @@ app.UseHttpsRedirection();
 
 app.UseAntiforgery();
 
-// app.Use(async (context, next) =>
-// {
-//     context.Response.Headers.Append("Cross-Origin-Opener-Policy", "same-origin");
-//     context.Response.Headers.Append("Cross-Origin-Embedder-Policy", "require-corp");
-//     await next();
-// });
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("Cross-Origin-Opener-Policy", "same-origin");
+    context.Response.Headers.Append("Cross-Origin-Embedder-Policy", "require-corp");
+    await next();
+});
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

@@ -29,7 +29,7 @@ public class GameHub : Hub
             await Groups.AddToGroupAsync(session.WhitePlayerId, session.GameId);
             await Groups.AddToGroupAsync(session.BlackPlayerId!, session.GameId);
             
-            var (whiteRating, blackRating) = await _eloService.GetRatingsAsync(session.WhiteUserId, session.BlackUserId);
+            var (whiteRating, blackRating) = await _eloService.GetRatingsAsync(session.WhiteUserId, session.BlackUserId, session.TimeControl);
 
             // Notify both players
             await Clients.Group(session.GameId).SendAsync("GameStarted", 
@@ -61,7 +61,7 @@ public class GameHub : Hub
             await Groups.AddToGroupAsync(Context.ConnectionId, gameId);
             var session = _gameManager.GetGame(gameId);
             
-            var (whiteRating, blackRating) = await _eloService.GetRatingsAsync(session.WhiteUserId, session.BlackUserId);
+            var (whiteRating, blackRating) = await _eloService.GetRatingsAsync(session.WhiteUserId, session.BlackUserId, session.TimeControl);
 
             // Notify both players that game started (or person reconnected)
             await Clients.Caller.SendAsync("GameStarted", 
@@ -174,7 +174,7 @@ public class GameHub : Hub
     private async Task HandleGameOver(GameSession session)
     {
         // Calculate ELO changes
-        var (wNew, bNew, wDelta, bDelta) = await _eloService.UpdateRatingsAsync(session.WhiteUserId, session.BlackUserId, session.Result);
+        var (wNew, bNew, wDelta, bDelta) = await _eloService.UpdateRatingsAsync(session.WhiteUserId, session.BlackUserId, session.Result, session.TimeControl);
 
         // Save Game History
         await _historyService.SaveGameAsync(session, session.Result, session.EndReason.ToString());

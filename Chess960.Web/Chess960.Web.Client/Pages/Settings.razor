@@ -1,7 +1,10 @@
 @page "/settings"
 @using Microsoft.AspNetCore.Components.Web
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@using Chess960.Web.Client.Services
+@using Chess960.Web.Client.Components
 @inject IJSRuntime JSRuntime
+@inject PieceThemeService PieceThemeService
 
 <div class="max-w-4xl mx-auto animate-soft-up">
     <div class="glass-panel p-8 mb-8">
@@ -9,83 +12,169 @@
         <p class="text-theme-muted text-lg">Customize your Chess960 experience.</p>
     </div>
 
+    <!-- Tabs -->
+    <div class="flex gap-4 mb-8 overflow-x-auto pb-2">
+        <button @onclick="@(() => activeTab = "appearance")" 
+                class="px-6 py-3 rounded-full font-bold transition-all @(activeTab == "appearance" ? "bg-theme-accent text-black shadow-glow" : "bg-white/5 text-white hover:bg-white/10")">
+            <span class="bi bi-palette-fill mr-2"></span> Appearance
+        </button>
+        <button @onclick="@(() => activeTab = "board")" 
+                class="px-6 py-3 rounded-full font-bold transition-all @(activeTab == "board" ? "bg-theme-accent text-black shadow-glow" : "bg-white/5 text-white hover:bg-white/10")">
+            <span class="bi bi-grid-3x3-gap-fill mr-2"></span> Board
+        </button>
+         <button @onclick="@(() => activeTab = "pieces")" 
+                class="px-6 py-3 rounded-full font-bold transition-all @(activeTab == "pieces" ? "bg-theme-accent text-black shadow-glow" : "bg-white/5 text-white hover:bg-white/10")">
+            <span class="bi bi-suit-spade-fill mr-2"></span> Pieces
+        </button>
+    </div>
+
     <div class="glass-panel p-8">
-        <h2 class="text-2xl font-display font-bold text-white mb-6 flex items-center gap-3">
-            <span class="bi bi-palette-fill text-theme-accent"></span> Appearance
-        </h2>
+        @if (activeTab == "appearance")
+        {
+            <h2 class="text-2xl font-display font-bold text-white mb-6 flex items-center gap-3 animate-fade-in">
+                <span class="bi bi-palette-fill text-theme-accent"></span> App Theme
+            </h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Neon Green (Default) -->
-            <button @onclick="@(() => SetTheme("green"))" class="group relative p-6 rounded-2xl border border-white/10 bg-black/40 hover:bg-white/5 transition-all duration-300 text-left">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="font-bold text-white text-lg">Neon Green</span>
-                    @if (currentTheme == "green")
-                    {
-                        <span class="bi bi-check-circle-fill text-[#00ff9d] text-xl"></span>
-                    }
-                </div>
-                <div class="h-24 rounded-xl bg-gradient-to-br from-[#050505] to-[#111827] relative overflow-hidden border border-white/5">
-                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(0,255,157,0.2),transparent)]"></div>
-                    <div class="absolute bottom-4 right-4 px-4 py-1 bg-[#00ff9d] text-black text-xs font-bold rounded-full shadow-[0_0_15px_rgba(0,255,157,0.4)]">Active</div>
-                </div>
-            </button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+                @foreach (var theme in appThemes)
+                {
+                    <button @onclick="@(() => SetTheme(theme.Id))" class="group relative p-6 rounded-2xl border border-white/10 bg-black/40 hover:bg-white/5 transition-all duration-300 text-left">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-bold text-white text-lg">@theme.Name</span>
+                            @if (currentTheme == theme.Id)
+                            {
+                                <span class="bi bi-check-circle-fill text-theme-accent text-xl"></span>
+                            }
+                        </div>
+                        <div class="h-24 rounded-xl bg-gradient-to-br @theme.GradientClasses relative overflow-hidden border border-white/5">
+                            <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.1),transparent)]"></div>
+                            <div class="absolute bottom-4 right-4 px-4 py-1 bg-white/20 backdrop-blur-md text-white text-xs font-bold rounded-full">
+                                @(currentTheme == theme.Id ? "Active" : "Select")
+                            </div>
+                        </div>
+                    </button>
+                }
+            </div>
+        }
+        else if (activeTab == "board")
+        {
+             <h2 class="text-2xl font-display font-bold text-white mb-6 flex items-center gap-3 animate-fade-in">
+                <span class="bi bi-grid-3x3-gap-fill text-theme-accent"></span> Board Theme
+            </h2>
 
-            <!-- Royal Gold -->
-            <button @onclick="@(() => SetTheme("gold"))" class="group relative p-6 rounded-2xl border border-white/10 bg-black/40 hover:bg-white/5 transition-all duration-300 text-left">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="font-bold text-white text-lg">Royal Gold</span>
-                    @if (currentTheme == "gold")
-                    {
-                        <span class="bi bi-check-circle-fill text-[#fbbf24] text-xl"></span>
-                    }
-                </div>
-                <div class="h-24 rounded-xl bg-gradient-to-br from-[#080808] to-[#1c1917] relative overflow-hidden border border-white/5">
-                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(251,191,36,0.2),transparent)]"></div>
-                    <div class="absolute bottom-4 right-4 px-4 py-1 bg-[#fbbf24] text-black text-xs font-bold rounded-full shadow-[0_0_15px_rgba(251,191,36,0.4)]">Select</div>
-                </div>
-            </button>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 animate-fade-in">
+                @foreach (var board in boardThemes)
+                {
+                    <button @onclick="@(() => SetBoardTheme(board.Id))" class="group relative aspect-square rounded-2xl border-2 @(currentBoardTheme == board.Id ? "border-theme-accent" : "border-transparent") overflow-hidden transition-all duration-300 hover:scale-105">
+                        <div class="w-full h-full relative" style="background-color: @board.BlackColor">
+                            <div class="absolute inset-0 grid grid-cols-2 grid-rows-2">
+                                <div style="background-color: @board.WhiteColor"></div>
+                                <div style="background-color: @board.BlackColor"></div>
+                                <div style="background-color: @board.BlackColor"></div>
+                                <div style="background-color: @board.WhiteColor"></div>
+                            </div>
+                             @if (currentBoardTheme == board.Id)
+                            {
+                                <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                    <span class="bi bi-check-circle-fill text-theme-accent text-4xl shadow-glow"></span>
+                                </div>
+                            }
+                        </div>
+                         <div class="absolute bottom-0 inset-x-0 p-2 bg-black/60 backdrop-blur text-center text-xs font-bold text-white uppercase tracking-wider">
+                            @board.Name
+                        </div>
+                    </button>
+                }
+            </div>
+        }
+        else if (activeTab == "pieces")
+        {
+             <h2 class="text-2xl font-display font-bold text-white mb-6 flex items-center gap-3 animate-fade-in">
+                <span class="bi bi-suit-spade-fill text-theme-accent"></span> Piece Set
+            </h2>
 
-            <!-- Electric Blue -->
-            <button @onclick="@(() => SetTheme("blue"))" class="group relative p-6 rounded-2xl border border-white/10 bg-black/40 hover:bg-white/5 transition-all duration-300 text-left">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="font-bold text-white text-lg">Electric Blue</span>
-                    @if (currentTheme == "blue")
-                    {
-                        <span class="bi bi-check-circle-fill text-[#22d3ee] text-xl"></span>
-                    }
-                </div>
-                <div class="h-24 rounded-xl bg-gradient-to-br from-[#020617] to-[#0f172a] relative overflow-hidden border border-white/5">
-                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.2),transparent)]"></div>
-                    <div class="absolute bottom-4 right-4 px-4 py-1 bg-[#22d3ee] text-black text-xs font-bold rounded-full shadow-[0_0_15px_rgba(34,211,238,0.4)]">Select</div>
-                </div>
-            </button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+                @foreach (var pieceSet in pieceThemes)
+                {
+                    <button @onclick="@(() => SetPieceTheme(pieceSet.Id))" class="group relative p-6 rounded-2xl border border-white/10 bg-black/40 hover:bg-white/5 transition-all duration-300 text-left">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-bold text-white text-lg">@pieceSet.Name</span>
+                             @if (currentPieceTheme == pieceSet.Id)
+                            {
+                                <span class="bi bi-check-circle-fill text-theme-accent text-xl"></span>
+                            }
+                        </div>
 
-            <!-- Cyber Purple -->
-            <button @onclick="@(() => SetTheme("purple"))" class="group relative p-6 rounded-2xl border border-white/10 bg-black/40 hover:bg-white/5 transition-all duration-300 text-left">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="font-bold text-white text-lg">Cyber Purple</span>
-                    @if (currentTheme == "purple")
-                    {
-                        <span class="bi bi-check-circle-fill text-[#d946ef] text-xl"></span>
-                    }
-                </div>
-                <div class="h-24 rounded-xl bg-gradient-to-br from-[#0f0518] to-[#2e1065] relative overflow-hidden border border-white/5">
-                    <div class="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(217,70,239,0.2),transparent)]"></div>
-                    <div class="absolute bottom-4 right-4 px-4 py-1 bg-[#d946ef] text-black text-xs font-bold rounded-full shadow-[0_0_15px_rgba(217,70,239,0.4)]">Select</div>
-                </div>
-            </button>
-        </div>
+                         <div class="h-32 rounded-xl bg-white/5 relative flex items-center justify-center gap-4 border border-white/5">
+                             @* Preview Pieces *@
+                             <ChessPiece PieceType="@('N')" IsWhite="true" Theme="@pieceSet.Id" Class="w-16 h-16 pointer-events-none" />
+                             <ChessPiece PieceType="@('K')" IsWhite="false" Theme="@pieceSet.Id" Class="w-16 h-16 pointer-events-none" />
+                        </div>
+                    </button>
+                }
+            </div>
+        }
     </div>
 </div>
 
 @code {
+    private string activeTab = "appearance";
     private string currentTheme = "green";
+    private string currentBoardTheme = "default";
+    private string currentPieceTheme = "standard";
+
+    // Data Models for Options
+    record AppTheme(string Id, string Name, string GradientClasses);
+    record BoardTheme(string Id, string Name, string WhiteColor, string BlackColor);
+    record PieceTheme(string Id, string Name);
+
+    private List<AppTheme> appThemes = new()
+    {
+        new("green", "Neon Green", "from-[#050505] to-[#111827]"),
+        new("gold", "Royal Gold", "from-[#080808] to-[#1c1917]"),
+        new("blue", "Electric Blue", "from-[#020617] to-[#0f172a]"),
+        new("purple", "Cyber Purple", "from-[#0f0518] to-[#2e1065]"),
+    };
+
+    private List<BoardTheme> boardThemes = new()
+    {
+        new("default", "Green", "#f0fdf4", "#15803d"),
+        new("wood", "Wood", "#f0d9b5", "#b58863"),
+        new("blue", "Ice", "#ddeeff", "#4b7399"),
+        new("ocean", "Ocean", "#f0fdf4", "#1e3a8a"),
+        new("grayscale", "Slate", "#e5e5e5", "#525252"),
+        new("purple", "Mystery", "#f3e8ff", "#6b21a8"),
+    };
+
+    private List<PieceTheme> pieceThemes = new()
+    {
+        new("standard", "Standard"),
+        new("neon", "Neon Glow"),
+        new("gold", "Golden"),
+        new("glass", "Frosted Glass"),
+        new("cburnett", "Classic (Lichess)"),
+        new("alpha", "Alpha"),
+        new("merida", "Merida"),
+        new("leipzig", "Leipzig"),
+        new("maestro", "Maestro"),
+        new("cardinal", "Cardinal"),
+    };
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            currentTheme = await JSRuntime.InvokeAsync<string>("themeService.getTheme");
+            currentTheme = await JSRuntime.InvokeAsync<string>("themeService.getTheme") ?? "green";
+            currentBoardTheme = await JSRuntime.InvokeAsync<string>("themeService.getBoardTheme") ?? "default";
+            currentPieceTheme = PieceThemeService.CurrentTheme; // Already init by layout usually, or we init here
+            
+            // Sync if service not init
+            if (string.IsNullOrEmpty(currentPieceTheme) || currentPieceTheme == "standard")
+            {
+                 await PieceThemeService.InitializeAsync();
+                 currentPieceTheme = PieceThemeService.CurrentTheme;
+            }
+
             StateHasChanged();
         }
     }
@@ -94,5 +183,17 @@
     {
         currentTheme = theme;
         await JSRuntime.InvokeVoidAsync("themeService.setTheme", theme);
+    }
+
+    private async Task SetBoardTheme(string theme)
+    {
+        currentBoardTheme = theme;
+        await JSRuntime.InvokeVoidAsync("themeService.setBoardTheme", theme);
+    }
+    
+    private async Task SetPieceTheme(string theme)
+    {
+        currentPieceTheme = theme;
+        await PieceThemeService.SetThemeAsync(theme);
     }
 }

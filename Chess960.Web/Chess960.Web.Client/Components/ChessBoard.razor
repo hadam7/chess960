@@ -1,5 +1,6 @@
 @using Chess960.Web.Client.Services
 @inject ChessGameService GameService
+@inject PieceThemeService PieceThemeService
 @implements IDisposable
 
 <div class="flex flex-col items-center gap-4">
@@ -48,6 +49,7 @@
                         {
                             <ChessPiece PieceType="@char.ToUpper(piece)" 
                                         IsWhite="@char.IsUpper(piece)" 
+                                        Theme="@PieceThemeService.CurrentTheme"
                                         Class="w-4/5 h-4/5 transition-transform hover:scale-110 z-10" />
                         }
 
@@ -72,9 +74,11 @@
     private (int file, int rank)? selectedSquare;
     private HashSet<string> legalMoves = new();
     
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         GameService.OnStateChanged += StateHasChanged;
+        PieceThemeService.OnThemeChanged += StateHasChanged;
+        await PieceThemeService.InitializeAsync();
     }
 
     protected override void OnParametersSet()
@@ -88,6 +92,7 @@
     public void Dispose()
     {
         GameService.OnStateChanged -= StateHasChanged;
+        PieceThemeService.OnThemeChanged -= StateHasChanged;
     }
 
     [Parameter] public string? OverlayFen { get; set; }

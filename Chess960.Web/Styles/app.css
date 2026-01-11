@@ -15,6 +15,35 @@
         --color-glow: 0 255 157;
         --gradient-start: 0 255 157;
         --gradient-end: 16 185 129;
+
+        /* Board Defaults (Green) */
+        --board-white: #f0fdf4;
+        --board-black: #15803d;
+    }
+
+    [data-board-theme='wood'] {
+        --board-white: #f0d9b5;
+        --board-black: #b58863;
+    }
+
+    [data-board-theme='blue'] {
+        --board-white: #ddeeff;
+        --board-black: #4b7399;
+    }
+
+    [data-board-theme='ocean'] {
+        --board-white: #f0fdf4;
+        --board-black: #1e3a8a;
+    }
+
+    [data-board-theme='grayscale'] {
+        --board-white: #e5e5e5;
+        --board-black: #525252;
+    }
+
+    [data-board-theme='purple'] {
+        --board-white: #f3e8ff;
+        --board-black: #6b21a8;
     }
 
     html {
