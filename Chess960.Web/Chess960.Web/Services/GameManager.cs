@@ -11,6 +11,25 @@ public class GameManager
     private readonly ConcurrentDictionary<string, GameSession> _games = new();
     // Key: TimeControl (e.g., "3+2"), Value: Queue of waiting players
     private readonly ConcurrentDictionary<string, ConcurrentQueue<(string ConnectionId, string UserId)>> _waitingQueues = new();
+    
+    // Key: UserId, Value: ConnectionId (Tracks online users)
+    private readonly ConcurrentDictionary<string, string> _userConnections = new();
+
+    public void RegisterUser(string userId, string connectionId)
+    {
+        _userConnections[userId] = connectionId;
+    }
+
+    public void UnregisterUser(string userId)
+    {
+        _userConnections.TryRemove(userId, out _);
+    }
+    
+    public string? GetConnectionId(string userId)
+    {
+        _userConnections.TryGetValue(userId, out var connId);
+        return connId;
+    }
 
     public GameSession? FindMatch(string playerConnectionId, string userId, string timeControl)
     {

@@ -1,11 +1,10 @@
 ﻿@inherits LayoutComponentBase
+@using Chess960.Web.Client.Components
 
 <div class="min-h-screen flex flex-col md:flex-row relative overflow-hidden">
     <!-- Global Animated Background -->
     <AnimatedBackground />
     
-
-
     <!-- Sidebar -->
     <NavMenu />
 
@@ -29,3 +28,6 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+<!-- Global Notification Center (Client-Side Interactive) -->
+<NotificationCenter />

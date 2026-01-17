@@ -21,6 +21,13 @@ public class GameHub : Hub
     {
         Interlocked.Increment(ref _onlineUsers);
         await BroadcastStats();
+        
+        var userId = Context.UserIdentifier;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            _gameManager.RegisterUser(userId, Context.ConnectionId);
+        }
+
         await base.OnConnectedAsync();
     }
 
@@ -28,6 +35,13 @@ public class GameHub : Hub
     {
         Interlocked.Decrement(ref _onlineUsers);
         await BroadcastStats();
+        
+        var userId = Context.UserIdentifier;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            _gameManager.UnregisterUser(userId);
+        }
+
         await base.OnDisconnectedAsync(exception);
     }
 
@@ -85,7 +99,8 @@ public class GameHub : Hub
             var (whiteRating, blackRating) = await _eloService.GetRatingsAsync(session.WhiteUserId, session.BlackUserId, session.TimeControl);
 
             // Notify both players that game started (or person reconnected)
-            await Clients.Caller.SendAsync("GameStarted", 
+            // Use Group so both hear it (essential for Private Game join)
+            await Clients.Group(gameId).SendAsync("GameStarted", 
                 session?.GameId, 
                 session?.Game.Pos.FenNotation, 
                 session?.WhiteUserId, 
@@ -202,6 +217,73 @@ public class GameHub : Hub
             // Draw Declined
              await Clients.Group(gameId).SendAsync("DrawDeclined");
         }
+    }
+
+    public async Task SendChallenge(string requesterId, string requesterName, string targetUserId, string timeControl)
+    {
+         var targetConnId = _gameManager.GetConnectionId(targetUserId);
+         if (!string.IsNullOrEmpty(targetConnId))
+         {
+             await Clients.Client(targetConnId).SendAsync("ChallengeReceived", requesterId, requesterName, timeControl);
+         }
+    }
+
+    public async Task RespondToChallenge(string requesterId, string targetUserId, bool accept, string timeControl)
+    {
+        if (!accept) return;
+
+        // Create Game
+        var requesterConnId = _gameManager.GetConnectionId(requesterId);
+        var targetConnId = Context.ConnectionId; // _gameManager.GetConnectionId(targetUserId);
+
+        if (string.IsNullOrEmpty(requesterConnId)) 
+        {
+            // Requester went offline?
+             await Clients.Caller.SendAsync("ChallengeFailed", "Requester is offline.");
+             return;
+        }
+
+        // Randomize colors or fixed? Let's random
+        string whiteId, blackId, whiteConn, blackConn;
+        if (Random.Shared.Next(2) == 0)
+        {
+            whiteId = requesterId; whiteConn = requesterConnId;
+            blackId = targetUserId; blackConn = targetConnId;
+        }
+        else 
+        {
+            whiteId = targetUserId; whiteConn = targetConnId;
+            blackId = requesterId; blackConn = requesterConnId;
+        }
+
+        var session = _gameManager.CreateGame(whiteConn, whiteId, blackConn, blackId, timeControl);
+
+        await Groups.AddToGroupAsync(whiteConn, session.GameId);
+        await Groups.AddToGroupAsync(blackConn, session.GameId);
+
+        var (whiteRating, blackRating) = await _eloService.GetRatingsAsync(whiteId, blackId, timeControl);
+
+        // Notify both players directly (safer than Group for immediate start)
+        await Clients.Clients(whiteConn, blackConn).SendAsync("GameStarted", 
+                session.GameId, 
+                session.Game.Pos.FenNotation, 
+                session.WhiteUserId, 
+                session.BlackUserId,
+                session.WhiteTimeRemainingMs,
+                session.BlackTimeRemainingMs,
+                whiteRating,
+                blackRating);
+    }
+
+    public async Task<string> CreatePrivateGame(string userId, string timeControl)
+    {
+         // Create a game with NO black player yet
+         var session = _gameManager.CreateGame(Context.ConnectionId, userId, "", "", timeControl);
+         
+         // Add creator to group
+         await Groups.AddToGroupAsync(Context.ConnectionId, session.GameId);
+         
+         return session.GameId;
     }
 
     private async Task HandleGameOver(GameSession session)

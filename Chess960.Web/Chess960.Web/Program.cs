@@ -39,7 +39,8 @@ builder.Services.AddAuthentication()
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));
+    options.UseSqlite(connectionString)
+           .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
@@ -56,7 +57,9 @@ builder.Services.AddSingleton<Chess960.Web.Services.GameManager>();
 builder.Services.AddScoped<Chess960.Web.Services.EloService>();
 builder.Services.AddScoped<Chess960.Web.Services.GameHistoryService>();
 builder.Services.AddScoped<Chess960.Web.Services.GameHistoryService>();
+builder.Services.AddScoped<Chess960.Web.Services.FriendService>();
 builder.Services.AddScoped<Chess960.Web.Services.MultiplayerService>();
+builder.Services.AddScoped<Chess960.Web.Client.Services.ClientFriendService>();
 builder.Services.AddScoped<Chess960.Web.Client.Services.PieceThemeService>();
 builder.Services.AddScoped(sp => new HttpClient());
 

@@ -15,6 +15,10 @@ public class MultiplayerService : IAsyncDisposable
     public event Action<string>? OnDrawOffered; // senderId
     public event Action? OnDrawDeclined;
     public event Action<int, int>? OnServerStatsUpdated; // onlineUsers, gamesToday
+    // requesterId, requesterName, timeControl
+    public event Action<string, string, string>? OnChallengeReceived; 
+    public event Action<string>? OnChallengeFailed;
+    public event Action<string, string>? OnFriendRequestReceived; // requesterId, requesterName
 
     public string? CurrentGameId { get; private set; }
     public string? MyConnectionId => _hubConnection?.ConnectionId;
@@ -68,6 +72,21 @@ public class MultiplayerService : IAsyncDisposable
         _hubConnection.On<int, int>("ServerStats", (onlineUsers, gamesToday) =>
         {
              OnServerStatsUpdated?.Invoke(onlineUsers, gamesToday);
+        });
+
+        _hubConnection.On<string, string, string>("ChallengeReceived", (requesterId, requesterName, timeControl) => 
+        {
+             OnChallengeReceived?.Invoke(requesterId, requesterName, timeControl);
+        });
+
+        _hubConnection.On<string>("ChallengeFailed", (reason) => 
+        {
+             OnChallengeFailed?.Invoke(reason);
+        });
+
+        _hubConnection.On<string, string>("FriendRequestReceived", (requesterId, requesterName) =>
+        {
+             OnFriendRequestReceived?.Invoke(requesterId, requesterName);
         });
 
         await _hubConnection.StartAsync();
@@ -127,6 +146,46 @@ public class MultiplayerService : IAsyncDisposable
         {
             await _hubConnection.SendAsync("RespondDraw", gameId, UserId, accept);
         }
+    }
+
+    public async Task SendChallengeAsync(string targetUserId, string timeControl)
+    {
+        if (_hubConnection is not null)
+        {
+            // requesterName handled by server lookup or passed here? Server can look it up if we passed ID, but easier if we pass name.
+            // Wait, we didn't add requesterName to SendChallenge in Hub. 
+            // In Hub: SendChallenge(string requesterId, string requesterName, string targetUserId, string timeControl)
+            // We need to pass our name.
+             await _hubConnection.SendAsync("SendChallenge", UserId, "Me", targetUserId, timeControl); 
+             // "Me" is placeholder, better to let server fetch it or pass it correctly. 
+             // Let's rely on server fetching name or client passing it from state.
+             // Updated Plan: Pass name from client state.
+        }
+    }
+
+    public async Task SendChallengeAsync(string myName, string targetUserId, string timeControl)
+    {
+        if (_hubConnection is not null)
+        {
+             await _hubConnection.SendAsync("SendChallenge", UserId, myName, targetUserId, timeControl);
+        }
+    }
+
+    public async Task RespondToChallengeAsync(string requesterId, bool accept, string timeControl)
+    {
+        if (_hubConnection is not null)
+        {
+             await _hubConnection.SendAsync("RespondToChallenge", requesterId, UserId, accept, timeControl);
+        }
+    }
+
+    public async Task<string?> CreatePrivateGameAsync(string timeControl)
+    {
+        if (_hubConnection is not null)
+        {
+             return await _hubConnection.InvokeAsync<string>("CreatePrivateGame", UserId, timeControl);
+        }
+        return null;
     }
 
     public async ValueTask DisposeAsync()

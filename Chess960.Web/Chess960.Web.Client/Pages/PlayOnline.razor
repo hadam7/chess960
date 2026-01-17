@@ -201,10 +201,6 @@
                 <span class="bi bi-grid-3x3-gap-fill text-lg mb-1"></span>
                 <span class="text-xs font-bold uppercase tracking-wide">Játszmák</span>
             </button>
-            <button class="@GetTabClass("players")" @onclick="@(() => activeTab = "players")">
-                <span class="bi bi-people-fill text-lg mb-1"></span>
-                <span class="text-xs font-bold uppercase tracking-wide">Játékosok</span>
-            </button>
         </div>
 
         <!-- Tab Content -->
@@ -363,14 +359,34 @@
                      <span>Nincsenek aktív játszmák.</span>
                  </div>
             }
-             else if (activeTab == "players")
-            {
-                <div class="text-theme-muted py-10 flex flex-col items-center gap-4">
-                     <span class="bi bi-people text-4xl opacity-20"></span>
-                     <span>Lista hamarosan...</span>
-                </div>
-            }
         </div>
+        
+        <!-- Challenge Received Modal -->
+        @if (incomingChallenge != null)
+        {
+            <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                <div class="bg-[#1a1a1a] w-full max-w-xs rounded-xl shadow-2xl border border-theme-accent/30 p-6 text-center">
+                    <div class="w-16 h-16 rounded-full bg-theme-accent/20 flex items-center justify-center mx-auto mb-4 animate-pulse">
+                        <span class="bi bi-lightning-charge-fill text-3xl text-theme-accent"></span>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-1">Kihívás!</h3>
+                    <p class="text-theme-muted text-sm mb-6">
+                        <span class="text-white font-bold">@incomingChallenge.RequesterName</span> kihívott egy 
+                        <span class="text-theme-accent font-mono">@incomingChallenge.TimeControl</span> meccsre.
+                    </p>
+                    
+                    <div class="flex gap-3">
+                         <button @onclick="AcceptChallenge" class="flex-1 py-3 bg-theme-accent text-black font-bold rounded hover:bg-theme-accent/90 transition-colors uppercase tracking-wider text-xs">
+                             Elfogad
+                         </button>
+                         <button @onclick="DeclineChallenge" class="flex-1 py-3 bg-white/10 text-white font-bold rounded hover:bg-white/20 transition-colors uppercase tracking-wider text-xs">
+                             Elutasít
+                         </button>
+                    </div>
+                </div>
+            </div>
+        }
+
         
          <!-- Footer Stats -->
         <div class="p-4 flex justify-between text-[10px] font-bold text-theme-muted border-t border-white/5 bg-black/20">
@@ -476,8 +492,17 @@
         Multiplayer.OnDrawDeclined -= HandleDrawDeclined;
         Multiplayer.OnServerStatsUpdated -= HandleServerStats;
         
+        // Unsubscribe Friend Events
+        Multiplayer.OnChallengeReceived -= HandleChallengeReceived;
+        
         return ValueTask.CompletedTask;
     }
+    
+    // Friend System State Removed (moved to Friends.razor)
+    
+    // Challenge State
+    private IncomingChallenge? incomingChallenge;
+    private record IncomingChallenge(string RequesterId, string RequesterName, string TimeControl);
     private int? NewRating;
     private int? RatingChange;
 
@@ -563,24 +588,8 @@
             }
         }
 
-        await Multiplayer.InitializeAsync();
-        
-        Multiplayer.OnWaitingForMatch += HandleWaiting;
-        Multiplayer.OnGameStarted += HandleGameStarted;
-        Multiplayer.OnMoveMade += HandleRemoteMove;
-        Multiplayer.OnGameOver += HandleGameOver;
-        Multiplayer.OnGameOver += HandleGameOver;
-        Multiplayer.OnDrawOffered += HandleDrawOffered;
-        Multiplayer.OnDrawDeclined += HandleDrawDeclined;
-        Multiplayer.OnServerStatsUpdated += HandleServerStats;
-
         if (!string.IsNullOrEmpty(GameId))
         {
-            // Only join if not already in this game (prevents redundant joins on navigation)
-            if (Multiplayer.CurrentGameId != GameId)
-            {
-                await Multiplayer.JoinGame(GameId);
-            }
             activeTab = "game";
         }
         else 
@@ -590,6 +599,30 @@
 
         CheckGameStatus();
         // StartClockTimer(); -- Handled by ChessClock
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Multiplayer.InitializeAsync();
+            
+            Multiplayer.OnWaitingForMatch += HandleWaiting;
+            Multiplayer.OnGameStarted += HandleGameStarted;
+            Multiplayer.OnMoveMade += HandleRemoteMove;
+            Multiplayer.OnGameOver += HandleGameOver;
+            Multiplayer.OnDrawOffered += HandleDrawOffered;
+            Multiplayer.OnDrawDeclined += HandleDrawDeclined;
+            Multiplayer.OnServerStatsUpdated += HandleServerStats;
+            Multiplayer.OnChallengeReceived += HandleChallengeReceived;
+
+            if (!string.IsNullOrEmpty(GameId) && Multiplayer.CurrentGameId != GameId)
+            {
+               await Multiplayer.JoinGame(GameId);
+            }
+            
+            // Friends loading removed
+        }
     }
 
     private void CheckGameStatus()
@@ -768,6 +801,29 @@
          }
 
          StateHasChanged();
+    }
+    
+    // Friend System Methods
+    // Friend System Methods Removed (Moved to Friends.razor)
+    
+    private void HandleChallengeReceived(string requesterId, string requesterName, string timeControl)
+    {
+        incomingChallenge = new IncomingChallenge(requesterId, requesterName, timeControl);
+        StateHasChanged();
+    }
+
+    private async Task AcceptChallenge()
+    {
+        if (incomingChallenge == null) return;
+        
+        await Multiplayer.RespondToChallengeAsync(incomingChallenge.RequesterId, true, incomingChallenge.TimeControl);
+        incomingChallenge = null;
+    }
+
+    private void DeclineChallenge()
+    {
+        // Optional: Notify decline
+        incomingChallenge = null;
     }
     
     // Navigation Methods
