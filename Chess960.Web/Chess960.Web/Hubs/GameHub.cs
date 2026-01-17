@@ -162,6 +162,18 @@ public class GameHub : Hub
          }
     }
 
+    public async Task Abort(string gameId, string userId)
+    {
+         var session = _gameManager.GetGame(gameId);
+         if (session == null) return;
+         
+         var endedSession = _gameManager.Abort(gameId, userId);
+         if (endedSession != null)
+         {
+             await HandleGameOver(endedSession);
+         }
+    }
+
     public async Task OfferDraw(string gameId, string userId)
     {
         var session = _gameManager.GetGame(gameId);
@@ -194,8 +206,24 @@ public class GameHub : Hub
 
     private async Task HandleGameOver(GameSession session)
     {
-        // Calculate ELO changes
-        var (wNew, bNew, wDelta, bDelta) = await _eloService.UpdateRatingsAsync(session.WhiteUserId, session.BlackUserId, session.Result, session.TimeControl);
+        // Calculate ELO changes (Skip if Aborted)
+        int wNew = 0, bNew = 0, wDelta = 0, bDelta = 0;
+
+        if (session.Result != GameResult.Aborted)
+        {
+            var result = await _eloService.UpdateRatingsAsync(session.WhiteUserId, session.BlackUserId, session.Result, session.TimeControl);
+            wNew = result.whiteNew;
+            bNew = result.blackNew; 
+            wDelta = result.whiteDelta;
+            bDelta = result.blackDelta;
+        }
+        else 
+        {
+             // Fetch current ratings without changing them
+             var ratings = await _eloService.GetRatingsAsync(session.WhiteUserId, session.BlackUserId, session.TimeControl);
+             wNew = ratings.whiteRating;
+             bNew = ratings.blackRating;
+        }
 
         // Save Game History
         await _historyService.SaveGameAsync(session, session.Result, session.EndReason.ToString());

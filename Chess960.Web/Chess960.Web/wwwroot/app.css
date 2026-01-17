@@ -1581,6 +1581,10 @@ h1,
   max-width: 36rem;
 }
 
+.max-w-\[calc\(100vh-13rem\)\]{
+  max-width: calc(100vh - 13rem);
+}
+
 .flex-1{
   flex: 1 1 0%;
 }
@@ -2325,6 +2329,10 @@ h1,
 
 .p-8{
   padding: 2rem;
+}
+
+.p-1{
+  padding: 0.25rem;
 }
 
 .px-0\.5{

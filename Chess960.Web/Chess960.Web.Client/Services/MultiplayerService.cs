@@ -105,6 +105,14 @@ public class MultiplayerService : IAsyncDisposable
         }
     }
 
+    public async Task AbortAsync(string gameId)
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("Abort", gameId, UserId);
+        }
+    }
+
     public async Task OfferDrawAsync(string gameId)
     {
         if (_hubConnection is not null)

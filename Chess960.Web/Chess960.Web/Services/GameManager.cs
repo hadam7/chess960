@@ -194,6 +194,31 @@ public class GameManager
         return null;
     }
 
+    public GameSession? Abort(string gameId, string userId)
+    {
+        if (_games.TryGetValue(gameId, out var session) && session.Result == GameResult.Active)
+        {
+            bool canAbort = false;
+            if (session.WhiteUserId == userId)
+            {
+                // White can abort if they haven't made a move yet (Game Start)
+                if (session.Moves.Count == 0) canAbort = true;
+            }
+            else if (session.BlackUserId == userId)
+            {
+                // Black can abort if they haven't made a move yet (Moves <= 1)
+                if (session.Moves.Count <= 1) canAbort = true;
+            }
+
+            if (canAbort)
+            {
+                EndGame(session, GameResult.Aborted, GameEndReason.Aborted, null);
+                return session;
+            }
+        }
+        return null;
+    }
+
     public bool OfferDraw(string gameId, string userId)
     {
         if (_games.TryGetValue(gameId, out var session) && session.Result == GameResult.Active)
@@ -282,7 +307,8 @@ public enum GameResult
     Active,
     WhiteWon,
     BlackWon,
-    Draw
+    Draw,
+    Aborted
 }
 
 public enum GameEndReason
@@ -290,6 +316,7 @@ public enum GameEndReason
     None,
     Checkmate,
     Resignation,
+    Aborted,
     Timeout,
     Stalemate,
     DrawAgreed,
