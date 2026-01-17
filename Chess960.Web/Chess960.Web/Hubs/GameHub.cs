@@ -8,12 +8,33 @@ public class GameHub : Hub
     private readonly GameManager _gameManager;
     private readonly EloService _eloService;
     private readonly GameHistoryService _historyService;
+    private static int _onlineUsers = 0;
 
     public GameHub(GameManager gameManager, EloService eloService, GameHistoryService historyService)
     {
         _gameManager = gameManager;
         _eloService = eloService;
         _historyService = historyService;
+    }
+
+    public override async Task OnConnectedAsync()
+    {
+        Interlocked.Increment(ref _onlineUsers);
+        await BroadcastStats();
+        await base.OnConnectedAsync();
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        Interlocked.Decrement(ref _onlineUsers);
+        await BroadcastStats();
+        await base.OnDisconnectedAsync(exception);
+    }
+
+    private async Task BroadcastStats()
+    {
+        var gamesToday = await _historyService.GetGamesPlayedTodayAsync();
+        await Clients.All.SendAsync("ServerStats", _onlineUsers, gamesToday);
     }
 
     // ... FindMatch and JoinGame unchanged ...
@@ -178,6 +199,8 @@ public class GameHub : Hub
 
         // Save Game History
         await _historyService.SaveGameAsync(session, session.Result, session.EndReason.ToString());
+
+        await BroadcastStats(); // Update game count
 
         await Clients.Group(session.GameId).SendAsync("GameOver", 
              session.WinnerUserId, 

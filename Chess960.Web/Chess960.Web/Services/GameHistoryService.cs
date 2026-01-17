@@ -62,4 +62,10 @@ public class GameHistoryService
     {
         return await _context.GameHistories.FirstOrDefaultAsync(g => g.Id == gameId);
     }
+
+    public async Task<int> GetGamesPlayedTodayAsync()
+    {
+        var today = DateTime.UtcNow.Date;
+        return await _context.GameHistories.CountAsync(g => g.DatePlayed >= today);
+    }
 }

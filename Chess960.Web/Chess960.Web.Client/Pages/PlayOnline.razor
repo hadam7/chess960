@@ -21,7 +21,7 @@
         <!-- Opponent Bar -->
         @if (!string.IsNullOrEmpty(GameId))
         {
-            <div class="w-full max-w-[76vh] flex items-center justify-between bg-black/40 backdrop-blur-md rounded-xl p-2 text-white shadow-2xl border-2 @(IsOpponentTurn ? "border-theme-accent/50 shadow-[0_0_20px_rgba(var(--color-accent),0.2)]" : "border-white/5") transition-all duration-500">
+            <div class="w-full max-w-[70vh] flex items-center justify-between bg-black/40 backdrop-blur-md rounded-xl p-2 text-white shadow-2xl border-2 @(IsOpponentTurn ? "border-theme-accent/50 shadow-[0_0_20px_rgba(var(--color-accent),0.2)]" : "border-white/5") transition-all duration-500">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
                     <div class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 shadow-inner relative overflow-hidden group flex-shrink-0">
                         <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -62,8 +62,8 @@
         }
 
         <!-- Board -->
-        <div class="w-full max-w-[76vh] relative aspect-square shadow-2xl rounded-none overflow-hidden border-2 border-white/10 bg-black/50 ring-1 ring-white/5 transition-all duration-500 ease-in-out">
-             <ChessBoard IsWhiteSide="@amIWhite" OnMove="HandleLocalMove" OverlayFen="@(IsViewingHistory ? fenHistory[currentViewIndex] : null)" />
+        <div class="w-full max-w-[70vh] relative aspect-square shadow-2xl rounded-none overflow-hidden border-2 border-white/10 bg-black/50 ring-1 ring-white/5 transition-all duration-500 ease-in-out">
+             <ChessBoard IsWhiteSide="@amIWhite" OnMove="HandleLocalMove" OverlayFen="@(IsViewingHistory ? fenHistory[currentViewIndex] : null)" Disabled="@isGameFinished" />
              
              <!-- Game Over Modal (Board Centered) -->
              @if (ShowGameOverModal)
@@ -140,7 +140,7 @@
         <!-- Player Bar -->
         @if (!string.IsNullOrEmpty(GameId))
         {
-            <div class="w-full max-w-[76vh] flex items-center justify-between bg-black/40 backdrop-blur-md rounded-xl p-2 text-white shadow-2xl border-2 @(IsMyTurn ? "border-theme-accent/50 shadow-[0_0_20px_rgba(var(--color-accent),0.2)]" : "border-white/5") transition-all duration-500">
+            <div class="w-full max-w-[70vh] flex items-center justify-between bg-black/40 backdrop-blur-md rounded-xl p-2 text-white shadow-2xl border-2 @(IsMyTurn ? "border-theme-accent/50 shadow-[0_0_20px_rgba(var(--color-accent),0.2)]" : "border-white/5") transition-all duration-500">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
                     <div class="w-9 h-9 rounded-lg bg-theme-accent flex items-center justify-center shadow-[0_0_15px_rgba(var(--color-accent),0.3)] relative overflow-hidden group flex-shrink-0">
                         <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -369,9 +369,9 @@
         <div class="p-4 flex justify-between text-[10px] font-bold text-theme-muted border-t border-white/5 bg-black/20">
             <div class="flex items-center gap-2">
                 <span class="bi bi-circle-fill text-green-500 text-[6px]"></span>
-                <span>157k Online</span>
+                <span>@OnlineUsersCount Online</span>
             </div>
-            <div>20M Játszma</div>
+            <div>@GamesTodayCount Játszma ma</div>
         </div>
 
     </div>
@@ -466,11 +466,16 @@
         Multiplayer.OnGameOver -= HandleGameOver;
         Multiplayer.OnDrawOffered -= HandleDrawOffered;
         Multiplayer.OnDrawDeclined -= HandleDrawDeclined;
+        Multiplayer.OnServerStatsUpdated -= HandleServerStats;
         
         return ValueTask.CompletedTask;
     }
     private int? NewRating;
     private int? RatingChange;
+
+    // Server Stats
+    private int OnlineUsersCount = 0;
+    private int GamesTodayCount = 0;
 
     // Draw Offer State
     private bool ShowDrawOffer = false;
@@ -491,6 +496,8 @@
         if (string.IsNullOrEmpty(GameId))
         {
             GameService.Reset();
+            isGameFinished = false;
+            ShowGameOverModal = false;
         }
 
         // Auth check
@@ -541,8 +548,10 @@
         Multiplayer.OnGameStarted += HandleGameStarted;
         Multiplayer.OnMoveMade += HandleRemoteMove;
         Multiplayer.OnGameOver += HandleGameOver;
+        Multiplayer.OnGameOver += HandleGameOver;
         Multiplayer.OnDrawOffered += HandleDrawOffered;
         Multiplayer.OnDrawDeclined += HandleDrawDeclined;
+        Multiplayer.OnServerStatsUpdated += HandleServerStats;
 
         if (!string.IsNullOrEmpty(GameId))
         {
@@ -605,10 +614,19 @@
         StateHasChanged();
     }
 
+    private void HandleServerStats(int onlineUsers, int gamesToday)
+    {
+        OnlineUsersCount = onlineUsers;
+        GamesTodayCount = gamesToday;
+        InvokeAsync(StateHasChanged);
+    }
+
     private void HandleGameStarted(string gameId, string fen, string whiteId, string blackId, long whiteTime, long blackTime, int wRating, int bRating)
     {
         // Cancel/Close any search UI
         isSearching = false;
+        isGameFinished = false;
+        ShowGameOverModal = false;
         
         GameId = gameId; // Set GameId for local use
         

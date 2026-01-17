@@ -14,6 +14,7 @@ public class MultiplayerService : IAsyncDisposable
     public event Action<string, string, string, int?, int?, int?, int?>? OnGameOver; // winnerId, reason, fen, wRating, bRating, wLow, bLow
     public event Action<string>? OnDrawOffered; // senderId
     public event Action? OnDrawDeclined;
+    public event Action<int, int>? OnServerStatsUpdated; // onlineUsers, gamesToday
 
     public string? CurrentGameId { get; private set; }
     public string? MyConnectionId => _hubConnection?.ConnectionId;
@@ -62,6 +63,11 @@ public class MultiplayerService : IAsyncDisposable
         _hubConnection.On("DrawDeclined", () =>
         {
              OnDrawDeclined?.Invoke();
+        });
+
+        _hubConnection.On<int, int>("ServerStats", (onlineUsers, gamesToday) =>
+        {
+             OnServerStatsUpdated?.Invoke(onlineUsers, gamesToday);
         });
 
         await _hubConnection.StartAsync();

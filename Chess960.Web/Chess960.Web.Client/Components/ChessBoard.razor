@@ -28,7 +28,7 @@
                     var isSelected = selectedSquare == (localFile, localRank);
                     var isHint = legalMoves.Contains($"{(char)('a' + localFile)}{localRank + 1}");
                     
-                    <div class="@squareColor relative flex items-center justify-center @(isSelected ? "ring-4 ring-yellow-400 ring-inset" : "")"
+                    <div class="@squareColor relative flex items-center justify-center @(isSelected && !Disabled ? "ring-4 ring-yellow-400 ring-inset" : "") @(Disabled ? "opacity-90 cursor-not-allowed" : "cursor-pointer")"
                          @onclick="() => HandleSquareClick(localFile, localRank)">
                         
                         @* Coordinate labels *@
@@ -69,6 +69,7 @@
 
 @code {
     [Parameter] public bool? IsWhiteSide { get; set; }
+    [Parameter] public bool Disabled { get; set; }
     [Parameter] public EventCallback<(string from, string to)> OnMove { get; set; }
 
     private (int file, int rank)? selectedSquare;
@@ -83,6 +84,12 @@
 
     protected override void OnParametersSet()
     {
+        if (Disabled)
+        {
+            selectedSquare = null;
+            legalMoves.Clear();
+        }
+
         if (!string.IsNullOrEmpty(OverlayFen))
         {
             Console.WriteLine($"[ChessBoard] OverlayFen update: {OverlayFen}");
@@ -155,6 +162,8 @@
     
     private async Task HandleSquareClick(int file, int rank)
     {
+        if (Disabled) return;
+
         // Disable interaction if viewing history
         if (!string.IsNullOrEmpty(OverlayFen)) return;
         

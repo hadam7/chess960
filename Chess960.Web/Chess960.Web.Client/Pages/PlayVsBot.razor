@@ -122,7 +122,6 @@
                 await module.InvokeVoidAsync("init", dotNetHelper);
                 Log("Init success.");
                 
-                GameService.Reset();
                 GameService.OnStateChanged += OnGameStateChanged;
                 StartNewGame();
             }
