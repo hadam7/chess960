@@ -202,19 +202,33 @@
          <div class="flex bg-black/20 border-b border-white/5">
             @if (!string.IsNullOrEmpty(GameId))
             {
-                <button class="@GetTabClass("game")" @onclick="@(() => activeTab = "game")">
+                <button class="@GetTabClass("game")" @onclick="@(() => SetActiveTab("game"))">
                     <span class="bi bi-lightning-fill text-lg mb-1"></span>
                     <span class="text-xs font-bold uppercase tracking-wide">Játék</span>
                 </button>
             }
-            <button class="@GetTabClass("new-game")" @onclick="@(() => activeTab = "new-game")">
+            <button class="@GetTabClass("new-game")" @onclick="@(() => SetActiveTab("new-game"))">
                 <span class="bi bi-plus-square-fill text-lg mb-1"></span>
                 <span class="text-xs font-bold uppercase tracking-wide">Új játszma</span>
             </button>
-            <button class="@GetTabClass("friends")" @onclick="@(() => activeTab = "friends")">
+            <button class="@GetTabClass("friends")" @onclick="@(() => SetActiveTab("friends"))">
                 <span class="bi bi-person-hearts text-lg mb-1"></span>
                 <span class="text-xs font-bold uppercase tracking-wide">Játék Baráttal</span>
             </button>
+
+            @if (!string.IsNullOrEmpty(GameId))
+            {
+                <button class="@GetTabClass("chat")" @onclick="@(() => SetActiveTab("chat"))">
+                    <div class="relative">
+                        <span class="bi bi-chat-fill text-lg mb-1"></span>
+                        @if (unreadMessages > 0 && activeTab != "chat")
+                        {
+                            <div class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-bounce"></div>
+                        }
+                    </div>
+                    <span class="text-xs font-bold uppercase tracking-wide">Chat</span>
+                </button>
+            }
         </div>
 
         <!-- Tab Content -->
@@ -456,6 +470,11 @@
                      </div>
                  </div>
             }
+
+            else if (activeTab == "chat" && !string.IsNullOrEmpty(GameId))
+            {
+                 <ChatArea GameId="@GameId" />
+            }
         </div>
         
         <!-- Challenge Received Modal -->
@@ -564,8 +583,12 @@
         Multiplayer.OnGameOver -= HandleGameOver;
         Multiplayer.OnDrawOffered -= HandleDrawOffered;
         Multiplayer.OnDrawDeclined -= HandleDrawDeclined;
+        Multiplayer.OnDrawDeclined -= HandleDrawDeclined;
         Multiplayer.OnServerStatsUpdated -= HandleServerStats;
         
+        // Chat
+        Multiplayer.OnChatMessageReceived -= HandleChatMessageNotification;
+
         // Unsubscribe Friend Events
         // Multiplayer.OnChallengeReceived removed from here (handled by NotificationCenter)
         Multiplayer.OnChallengeFailed -= HandleChallengeFailed;
@@ -582,6 +605,9 @@
     // Server Stats
     private int OnlineUsersCount = 0;
     private int GamesTodayCount = 0;
+    
+    // Chat State
+    private int unreadMessages = 0;
 
     // Draw Offer State
     private bool ShowDrawOffer = false;
@@ -1118,8 +1144,18 @@
     private async Task StartNewGameSearch()
     {
         ShowGameOverModal = false;
-        activeTab = "new-game"; // Switch to new game tab to see search UI
+        SetActiveTab("new-game"); // Switch to new game tab to see search UI
         await FindMatch();
+    }
+    
+    private void SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        if (activeTab == "chat")
+        {
+            unreadMessages = 0;
+        }
+        StateHasChanged(); 
     }
 
     private void CloseGameOver()
@@ -1128,6 +1164,15 @@
         // Nav.NavigateTo("/");  -- User wants to stay on the game page
     }
 
+
+    private void HandleChatMessageNotification(string senderId, string message)
+    {
+        if (activeTab != "chat")
+        {
+            unreadMessages++;
+            InvokeAsync(StateHasChanged);
+        }
+    }
 
     private class UserInfoResponse
     {

@@ -105,6 +105,12 @@ public class MultiplayerService : IAsyncDisposable
              OnFriendRequestReceived?.Invoke(requesterId, requesterName);
         });
 
+        _hubConnection.On<string, string>("ChatMessage", (senderId, message) =>
+        {
+             Console.WriteLine($"[Client Service] ChatMessage received: {message} from {senderId}");
+             OnChatMessageReceived?.Invoke(senderId, message);
+        });
+
         await _hubConnection.StartAsync();
     }
 
@@ -202,6 +208,17 @@ public class MultiplayerService : IAsyncDisposable
              return await _hubConnection.InvokeAsync<string>("CreatePrivateGame", UserId, timeControl);
         }
         return null;
+    }
+
+    // Chat Event
+    public event Action<string, string>? OnChatMessageReceived; // senderId, message
+
+    public async Task SendMessageAsync(string gameId, string message)
+    {
+        if (_hubConnection is not null)
+        {
+            await _hubConnection.SendAsync("SendMessage", gameId, message, UserId);
+        }
     }
 
     public async ValueTask DisposeAsync()

@@ -1,0 +1,99 @@
+@using Chess960.Web.Services
+@using Chess960.Web.Client.Services
+@inject MultiplayerService Multiplayer
+@inject AuthenticationStateProvider AuthStateProvider
+@implements IAsyncDisposable
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+<div class="flex flex-col h-full bg-black/20 rounded-lg overflow-hidden border border-white/5 relative z-20">
+    <!-- Messages Area -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent flex flex-col-reverse" id="chat-scroller">
+        @foreach (var msg in messages)
+        {
+            var isMe = msg.SenderId == Multiplayer.UserId;
+            <div class="flex flex-col @(isMe ? "items-end" : "items-start") animate-in slide-in-from-bottom-2 fade-in duration-300">
+                <div class="max-w-[85%] rounded-2xl px-3 py-2 text-xs break-words @(isMe ? "bg-theme-accent text-black rounded-tr-none font-bold" : "bg-white/10 text-white rounded-tl-none")">
+                    @msg.Message
+                </div>
+                <!-- Optional: Sender Name logic requires looking up name, for now just distinguish by color -->
+            </div>
+        }
+        @if (messages.Count == 0)
+        {
+            <div class="text-center text-white/20 text-xs italic mt-4">
+                Írj valamit...
+            </div>
+        }
+    </div>
+
+    <!-- Input Area -->
+    <div class="p-2 bg-black/40 border-t border-white/5">
+        <div class="relative">
+            <input @bind="newMessage" @bind:event="oninput" @onkeydown="HandleKeyDown"
+                   placeholder="Üzenet..." 
+                   class="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-4 pr-10 text-xs text-white placeholder-white/30 focus:outline-none focus:border-theme-accent/50 focus:bg-white/10 transition-all font-sans"
+                   maxlength="200" />
+            <button @onclick="SendMessage" disabled="@string.IsNullOrWhiteSpace(newMessage)"
+                    class="absolute right-1 top-1 w-7 h-7 bg-theme-accent text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                <span class="bi bi-send-fill text-[10px] ml-0.5"></span>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string GameId { get; set; } = "";
+    
+    // We reverse the list for display (flex-col-reverse) so new messages appear at bottom naturally without JS scrolling hacks?
+    // Actually flex-col-reverse puts the first item at the bottom. So we should prepend to list or keep normal order and scroll?
+    // Let's use normal order (top to bottom) but keep 'flex-col-reverse' which flips it?
+    // Standard chat: Newest at bottom.
+    // flex-col-reverse: Item 0 is at bottom. So List[0] is bottom-most.
+    // If I add(msg), it goes to end (Index N).
+    // Let's stick to standard behavior: flex-col (normal). We need JS to scroll to bottom.
+    // OR: flex-col-reverse and we Insert(0, msg). Then Newest is at index 0 (Bottom).
+    
+    private List<ChatMessage> messages = new();
+    private string newMessage = "";
+
+    protected override void OnInitialized()
+    {
+        Multiplayer.OnChatMessageReceived += HandleMessageReceived;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Multiplayer.OnChatMessageReceived -= HandleMessageReceived;
+    }
+
+    private void HandleMessageReceived(string senderId, string message)
+    {
+        // Add to TOP (Index 0) because we use flex-col-reverse
+        messages.Insert(0, new ChatMessage(senderId, message, DateTime.Now));
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(newMessage)) return;
+        if (string.IsNullOrEmpty(GameId)) return;
+
+        var text = newMessage;
+        newMessage = ""; // Clear immediately for UX
+
+        await Multiplayer.SendMessageAsync(GameId, text);
+        // We receive our own message via SignalR broadcast, so no need to add locally unless optimistic.
+        // GameHub broadcasts to Group, so we SHOULD get it back.
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessage();
+        }
+    }
+
+    private record ChatMessage(string SenderId, string Message, DateTime Timestamp);
+}

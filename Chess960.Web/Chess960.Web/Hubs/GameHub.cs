@@ -299,6 +299,13 @@ public class GameHub : Hub
          return session.GameId;
     }
 
+    public async Task SendMessage(string gameId, string message, string userId)
+    {
+        Console.WriteLine($"[Hub] SendMessage: Game={gameId}, Msg={message}, User={userId}");
+        // Broadcast to group
+        await Clients.Group(gameId).SendAsync("ChatMessage", userId, message);
+    }
+
     private async Task HandleGameOver(GameSession session)
     {
         // Calculate ELO changes (Skip if Aborted)
