@@ -43,8 +43,12 @@ public class FriendController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (userId == null) return Unauthorized();
 
-        var success = await _friendService.SendFriendRequestAsync(userId, targetUsername);
-        return success ? Ok() : BadRequest("Failed to send request (User not found or already sent).");
+        var error = await _friendService.SendFriendRequestAsync(userId, targetUsername);
+        if (error != null)
+        {
+             return BadRequest(error);
+        }
+        return Ok();
     }
 
     [HttpPost("accept/{id}")]

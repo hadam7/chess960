@@ -83,6 +83,7 @@
 
     private void HandleChallengeReceived(string requesterId, string requesterName, string timeControl)
     {
+        Console.WriteLine($"[NotificationTheCenter] Challenge Received from {requesterName} ({requesterId})!");
         activeChallenges.Add(new ChallengeNotification(requesterId, requesterName, timeControl));
         InvokeAsync(StateHasChanged);
         

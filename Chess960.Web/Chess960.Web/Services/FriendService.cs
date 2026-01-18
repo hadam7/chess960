@@ -11,19 +11,21 @@ public class FriendService
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IHubContext<GameHub> _hubContext;
+    private readonly IConnectionTracker _connectionTracker;
 
-    public FriendService(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IHubContext<GameHub> hubContext)
+    public FriendService(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IHubContext<GameHub> hubContext, IConnectionTracker connectionTracker)
     {
         _context = context;
         _userManager = userManager;
         _hubContext = hubContext;
+        _connectionTracker = connectionTracker;
     }
 
-    public async Task<bool> SendFriendRequestAsync(string requesterId, string targetUsername)
+    public async Task<string?> SendFriendRequestAsync(string requesterId, string targetUsername)
     {
         var targetUser = await _userManager.FindByNameAsync(targetUsername);
-        if (targetUser == null) return false;
-        if (targetUser.Id == requesterId) return false;
+        if (targetUser == null) return "Felhasználó nem található.";
+        if (targetUser.Id == requesterId) return "Nem jelölheted be magadat.";
 
         // Check if exists
         var existing = await _context.Friendships
@@ -33,9 +35,8 @@ public class FriendService
 
         if (existing != null)
         {
-            // If was declined/blocked, maybe allow resend? For now, just return false if any link exists
-            if (existing.Status == FriendshipStatus.Pending || existing.Status == FriendshipStatus.Accepted)
-                return false;
+            if (existing.Status == FriendshipStatus.Accepted) return "Már barátok vagytok.";
+            if (existing.Status == FriendshipStatus.Pending) return "Már van folyamatban lévő kérelem.";
         }
 
         var friendship = new Friendship
@@ -56,7 +57,7 @@ public class FriendService
 
         await _hubContext.Clients.User(targetUser.Id).SendAsync("FriendRequestReceived", requesterId, requesterName);
         
-        return true;
+        return null; // Success
     }
 
     public async Task<List<FriendDto>> GetFriendsAsync(string userId)
@@ -71,14 +72,16 @@ public class FriendService
         {
             var isRequester = f.RequesterId == userId;
             var friend = isRequester ? f.Receiver : f.Requester;
+            var isOnline = _connectionTracker.IsUserOnline(friend.Id);
+
             return new FriendDto
             {
                 FriendshipId = f.Id,
                 UserId = friend.Id,
                 UserName = friend.UserName ?? "Unknown",
-                Status = "Online" // We'll handle online status in Hub/UI
+                Status = isOnline ? "Online" : "Offline"
             };
-        }).ToList();
+        }).OrderByDescending(f => f.Status == "Online").ThenBy(f => f.UserName).ToList();
     }
 
     public async Task<List<FriendRequestDto>> GetPendingRequestsAsync(string userId)

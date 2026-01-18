@@ -8,19 +8,33 @@ namespace Chess960.Web.Client.Services;
 
 public class ChessGameService
 {
-    public IGame Game { get; private set; }
+    public IGame? Game { get; private set; }
+    public bool IsInitialized => Game != null;
 
     public event Action? OnStateChanged;
 
     public ChessGameService()
     {
-        // Initialize with a standard game by default, or empty
-        Game = GameFactory.Create();
-        Game.NewGame();
+        // Constructor is now lightweight
+    }
+
+    public async Task InitializeAsync()
+    {
+        if (Game != null) return;
+
+        // Offload heavy initialization (Magic Bitboards etc) to background thread
+        await Task.Run(() =>
+        {
+            Game = GameFactory.Create();
+            Game.NewGame();
+        });
+        NotifyStateChanged();
     }
 
     public void StartNewGame(bool is960 = false)
     {
+        if (Game == null) return;
+
         if (is960)
         {
             string fen = Chess960Generator.GenerateStartingFen();
@@ -36,6 +50,8 @@ public class ChessGameService
     
     public void StartGameFromFen(string fen)
     {
+        // We can create a new game instance synchronously here if the static init is done, 
+        // but 'GameFactory.Create(fen)' is fast enough once static statics are loaded.
         Game = GameFactory.Create(fen);
         GameOverMessage = "";
         NotifyStateChanged();
@@ -49,13 +65,15 @@ public class ChessGameService
         NotifyStateChanged();
     }
 
-    public bool IsCheck => Game.Pos.InCheck;
-    public bool IsMate => Game.Pos.IsMate;
-    public bool IsStalemate => !IsCheck && !Game.Pos.GenerateMoves().Any();
+    public bool IsCheck => Game?.Pos.InCheck ?? false;
+    public bool IsMate => Game?.Pos.IsMate ?? false;
+    public bool IsStalemate => !IsCheck && !(Game?.Pos.GenerateMoves().Any() ?? false);
     public string GameOverMessage { get; private set; } = "";
 
     public bool MakeMove(string fromSquare, string toSquare)
     {
+        if (Game == null) return false;
+
         // Convert string squares to Square types
         var from = new Square(fromSquare);
         var to = new Square(toSquare);
@@ -86,6 +104,8 @@ public class ChessGameService
 
     public IEnumerable<string> GetLegalMovesFor(string fromSquare)
     {
+        if (Game == null) return Enumerable.Empty<string>();
+
         var from = new Square(fromSquare);
         var moveList = Game.Pos.GenerateMoves();
         
@@ -114,7 +134,7 @@ public class ChessGameService
 
     public string GetFen()
     {
-        return Game.Pos.FenNotation;
+        return Game?.Pos.FenNotation ?? "";
     }
 
     private void NotifyStateChanged() => OnStateChanged?.Invoke();

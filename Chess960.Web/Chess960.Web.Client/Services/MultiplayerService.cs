@@ -29,7 +29,21 @@ public class MultiplayerService : IAsyncDisposable
         _navigationManager = navigationManager;
     }
 
+    private Task? _initTask;
+
     public async Task InitializeAsync()
+    {
+        if (_initTask != null)
+        {
+            await _initTask;
+            return;
+        }
+
+        _initTask = ConnectAsync();
+        await _initTask;
+    }
+
+    private async Task ConnectAsync()
     {
         if (_hubConnection is not null) return;
 
@@ -76,6 +90,8 @@ public class MultiplayerService : IAsyncDisposable
 
         _hubConnection.On<string, string, string>("ChallengeReceived", (requesterId, requesterName, timeControl) => 
         {
+             Console.WriteLine($"[MultiplayerService] ChallengeReceived from {requesterName} ({requesterId})! Invoking event...");
+             if (OnChallengeReceived == null) Console.WriteLine("[MultiplayerService] WARNING: No subscribers to OnChallengeReceived!");
              OnChallengeReceived?.Invoke(requesterId, requesterName, timeControl);
         });
 

@@ -8,40 +8,44 @@ public class GameHub : Hub
     private readonly GameManager _gameManager;
     private readonly EloService _eloService;
     private readonly GameHistoryService _historyService;
+    private readonly IConnectionTracker _connectionTracker;
     private static int _onlineUsers = 0;
 
-    public GameHub(GameManager gameManager, EloService eloService, GameHistoryService historyService)
+    public GameHub(GameManager gameManager, EloService eloService, GameHistoryService historyService, IConnectionTracker connectionTracker)
     {
         _gameManager = gameManager;
         _eloService = eloService;
         _historyService = historyService;
+        _connectionTracker = connectionTracker;
     }
 
     public override async Task OnConnectedAsync()
     {
         Interlocked.Increment(ref _onlineUsers);
-        await BroadcastStats();
         
         var userId = Context.UserIdentifier;
         if (!string.IsNullOrEmpty(userId))
         {
+            _connectionTracker.UserConnected(userId);
             _gameManager.RegisterUser(userId, Context.ConnectionId);
         }
 
+        await BroadcastStats();
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         Interlocked.Decrement(ref _onlineUsers);
-        await BroadcastStats();
         
         var userId = Context.UserIdentifier;
         if (!string.IsNullOrEmpty(userId))
         {
+            _connectionTracker.UserDisconnected(userId);
             _gameManager.UnregisterUser(userId);
         }
 
+        await BroadcastStats();
         await base.OnDisconnectedAsync(exception);
     }
 
@@ -221,11 +225,20 @@ public class GameHub : Hub
 
     public async Task SendChallenge(string requesterId, string requesterName, string targetUserId, string timeControl)
     {
+         Console.WriteLine($"[Hub] SendChallenge: From={requesterName} ({requesterId}) To={targetUserId}");
+         
          var targetConnId = _gameManager.GetConnectionId(targetUserId);
-         if (!string.IsNullOrEmpty(targetConnId))
+         
+         if (string.IsNullOrEmpty(targetConnId))
          {
-             await Clients.Client(targetConnId).SendAsync("ChallengeReceived", requesterId, requesterName, timeControl);
+             Console.WriteLine($"[Hub] WARNING: Target user {targetUserId} not found in GameManager connections.");
+             // Notify caller that target is offline/not found
+             await Clients.Caller.SendAsync("ChallengeFailed", "User seems offline (no connection found).");
+             return;
          }
+
+         Console.WriteLine($"[Hub] Sending ChallengeReceived to {targetConnId}");
+         await Clients.Client(targetConnId).SendAsync("ChallengeReceived", requesterId, requesterName, timeControl);
     }
 
     public async Task RespondToChallenge(string requesterId, string targetUserId, bool accept, string timeControl)

@@ -1,6 +1,5 @@
 // Make it global for easier Blazor interop
 window.initAnimatedBackground = function (containerOrId) {
-    console.log('[AnimatedBackground.js] Initializing with:', containerOrId);
     let container;
     if (typeof containerOrId === 'string') {
         container = document.getElementById(containerOrId);
@@ -8,13 +7,14 @@ window.initAnimatedBackground = function (containerOrId) {
         container = containerOrId;
     }
 
-    if (!container) {
-        console.error('[AnimatedBackground.js] Container not found for:', containerOrId);
-        return;
-    }
+    if (!container) return;
 
-    // Clear existing pieces if re-initializing
+    // Clear existing
     container.innerHTML = '';
+    container.style.position = 'absolute';
+    container.style.inset = '0';
+    container.style.overflow = 'hidden';
+    container.style.pointerEvents = 'none'; // Click-through
 
     const pieces = ['P', 'N', 'B', 'R', 'Q', 'K'];
     const count = 15;
@@ -26,17 +26,19 @@ window.initAnimatedBackground = function (containerOrId) {
         const el = document.createElement('img');
         el.src = `/images/pieces/merida/w${pieceType}.svg`;
         el.style.position = 'absolute';
-        el.style.opacity = '0.2'; // Ensures visibility
+
+        // MONOCHROME: Just opacity, no color filters
+        el.style.opacity = '0.15';
         el.style.pointerEvents = 'none';
 
         // Random initial state
         const state = {
             x: Math.random() * 100, // %
-            y: 110 + Math.random() * 50, // % (start below screen)
-            speed: 0.05 + Math.random() * 0.05, // % per frame
+            y: 110 + Math.random() * 50, // Start below
+            speed: 0.03 + Math.random() * 0.03, // Moderate speed
             rotation: Math.random() * 360,
-            rotationSpeed: (Math.random() - 0.5) * 0.5,
-            size: 40 + Math.random() * 60, // px
+            rotationSpeed: (Math.random() - 0.5) * 0.3,
+            size: 40 + Math.random() * 80, // px
             el: el
         };
 
@@ -44,32 +46,41 @@ window.initAnimatedBackground = function (containerOrId) {
         el.style.height = `${state.size}px`;
         el.style.left = `${state.x}%`;
 
+        // Initial transform
+        el.style.transform = `translateY(100vh)`;
+
         container.appendChild(el);
         elements.push(state);
     }
 
     let animationId;
+    let lastTime = 0;
 
-    function animate() {
+    function animate(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+
         for (const item of elements) {
             // Update position
             item.y -= item.speed;
             item.rotation += item.rotationSpeed;
 
-            // Reset if moved off top
+            // Reset
             if (item.y < -20) {
                 item.y = 110;
                 item.x = Math.random() * 100;
             }
 
-            // Apply styles
-            item.el.style.transform = `translateY(${window.innerHeight * (item.y / 100) - window.innerHeight}px) rotate(${item.rotation}deg)`;
-            item.el.style.top = `${item.y}%`; // Fallback/Basis
+            // Apply transform (GPU accelerated)
+            const yPx = window.innerHeight * (item.y / 100) - window.innerHeight;
+            item.el.style.transform = `translate3d(0, ${yPx}px, 0) rotate(${item.rotation}deg)`;
+            item.el.style.left = `${item.x}%`;
         }
+
+        lastTime = timestamp;
         animationId = requestAnimationFrame(animate);
     }
 
-    animate();
+    animationId = requestAnimationFrame(animate);
 
     return {
         dispose: () => {
@@ -79,16 +90,13 @@ window.initAnimatedBackground = function (containerOrId) {
     };
 };
 
-// Auto-initialize if the global container exists
 (function () {
     const containerId = 'animated-bg-container';
     const init = () => {
         if (document.getElementById(containerId)) {
-            console.log('[AnimatedBackground.js] Auto-initializing...');
             window.initAnimatedBackground(containerId);
         }
     };
-
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

@@ -17,17 +17,20 @@ public class GameManager
 
     public void RegisterUser(string userId, string connectionId)
     {
+        Console.WriteLine($"[GameManager] RegisterUser: {userId} -> {connectionId}");
         _userConnections[userId] = connectionId;
     }
 
     public void UnregisterUser(string userId)
     {
+        Console.WriteLine($"[GameManager] UnregisterUser: {userId}");
         _userConnections.TryRemove(userId, out _);
     }
     
     public string? GetConnectionId(string userId)
     {
         _userConnections.TryGetValue(userId, out var connId);
+        Console.WriteLine($"[GameManager] GetConnectionId for {userId} returns {connId ?? "NULL"}");
         return connId;
     }
 

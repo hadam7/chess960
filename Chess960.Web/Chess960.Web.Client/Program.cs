@@ -16,4 +16,12 @@ builder.Services.AddScoped<MultiplayerService>();
 builder.Services.AddScoped<PieceThemeService>();
 builder.Services.AddScoped<ClientFriendService>();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+// Warm up the Chess Engine immediately!
+// This ensures that the heavy static initialization happens while the user is on the home/login page.
+// We don't await it here to not block the app startup, it runs in background.
+var gameService = host.Services.GetRequiredService<ChessGameService>();
+_ = gameService.InitializeAsync(); 
+
+await host.RunAsync();

@@ -20,7 +20,7 @@
     <!-- Navigation Links -->
     <div id="mobile-menu" class="hidden md:flex flex-col flex-1 px-2 lg:px-4 py-4 space-y-2 overflow-y-auto">
         <NavLink class="flex items-center justify-center lg:justify-start px-3 py-3 rounded-full text-theme-muted font-medium transition-all duration-200 hover:bg-white/10 hover:text-white group" href="" Match="NavLinkMatch.All">
-            <span class="bi bi-house-door text-xl lg:mr-3 group-hover:scale-110 transition-transform text-theme-accent"></span> 
+            <span class="bi bi-house-door text-xl lg:mr-3 group-hover:scale-110 transition-transform" style="color: #4ade80;"></span> 
             <span class="hidden lg:block">Home</span>
         </NavLink>
 
@@ -28,16 +28,16 @@
         <div class="lg:hidden w-full h-px bg-white/10 my-2"></div>
         
         <NavLink class="flex items-center justify-center lg:justify-start px-3 py-3 rounded-full text-theme-muted font-medium transition-all duration-200 hover:bg-white/10 hover:text-white group" href="play-bot">
-            <span class="bi bi-robot text-xl lg:mr-3 group-hover:scale-110 transition-transform text-theme-accent"></span>
+            <span class="bi bi-robot text-xl lg:mr-3 group-hover:scale-110 transition-transform" style="color: #fb923c;"></span>
             <span class="hidden lg:block">Play vs Bot</span>
         </NavLink>
         <NavLink class="flex items-center justify-center lg:justify-start px-3 py-3 rounded-full text-theme-muted font-medium transition-all duration-200 hover:bg-white/10 hover:text-white group" href="play-online">
-            <span class="bi bi-people text-xl lg:mr-3 group-hover:scale-110 transition-transform text-theme-accent"></span>
+            <span class="bi bi-people text-xl lg:mr-3 group-hover:scale-110 transition-transform" style="color: #c084fc;"></span>
             <span class="hidden lg:block">Multiplayer</span>
         </NavLink>
         <!-- Friends Link -->
         <NavLink class="flex items-center justify-center lg:justify-start px-3 py-3 rounded-full text-theme-muted font-medium transition-all duration-200 hover:bg-white/10 hover:text-white group" href="friends">
-            <span class="bi bi-person-heart text-xl lg:mr-3 group-hover:scale-110 transition-transform text-theme-accent"></span>
+            <span class="bi bi-person-heart text-xl lg:mr-3 group-hover:scale-110 transition-transform" style="color: #f87171;"></span>
             <span class="hidden lg:block">Barátok</span>
         </NavLink>
 
@@ -45,14 +45,14 @@
         <div class="lg:hidden w-full h-px bg-white/10 my-2"></div>
 
         <NavLink class="flex items-center justify-center lg:justify-start px-3 py-3 rounded-full text-theme-muted font-medium transition-all duration-200 hover:bg-white/10 hover:text-white group" href="settings">
-            <span class="bi bi-gear text-xl lg:mr-3 group-hover:scale-110 transition-transform text-theme-accent"></span>
+            <span class="bi bi-gear text-xl lg:mr-3 group-hover:scale-110 transition-transform text-gray-400"></span>
             <span class="hidden lg:block">Settings</span>
         </NavLink>
 
         <AuthorizeView>
             <Authorized>
                 <NavLink class="flex items-center justify-center lg:justify-start px-3 py-3 rounded-full text-theme-muted font-medium transition-all duration-200 hover:bg-white/10 hover:text-white group" href="profile">
-                    <span class="bi bi-person-circle text-xl lg:mr-3 group-hover:scale-110 transition-transform text-theme-accent"></span>
+                    <span class="bi bi-person-circle text-xl lg:mr-3 group-hover:scale-110 transition-transform" style="color: #60a5fa;"></span>
                     <span class="hidden lg:block">Profile</span>
                 </NavLink>
                 <form action="Account/Logout" method="post" class="w-full mt-2">

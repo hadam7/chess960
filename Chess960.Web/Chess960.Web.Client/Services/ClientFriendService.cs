@@ -17,8 +17,9 @@ public class ClientFriendService
         {
             return await _http.GetFromJsonAsync<List<FriendDto>>("api/friends") ?? new();
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[ClientFriendService] GetFriendsAsync Error: {ex.Message}");
             return new();
         }
     }
@@ -35,16 +36,24 @@ public class ClientFriendService
         }
     }
 
-    public async Task<bool> SendFriendRequestAsync(string targetUsername)
+    public async Task<string?> SendFriendRequestAsync(string targetUsername)
     {
         try
         {
             var response = await _http.PostAsJsonAsync("api/friends/request", targetUsername);
-            return response.IsSuccessStatusCode;
+            if (response.IsSuccessStatusCode)
+            {
+                return null; // Success
+            }
+            else
+            {
+                return await response.Content.ReadAsStringAsync(); // Return error message
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            return false;
+            Console.WriteLine($"[ClientFriendService] ERROR: {ex.Message}");
+            return $"Hálózati hiba: {ex.Message}";
         }
     }
 
