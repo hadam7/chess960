@@ -1,6 +1,7 @@
 @using Chess960.Web.Client.Services
 @inject ChessGameService GameService
 @inject PieceThemeService PieceThemeService
+@inject AudioService AudioService
 @implements IDisposable
 
 <div class="flex flex-col items-center gap-4">
@@ -77,9 +78,17 @@
     
     protected override async Task OnInitializedAsync()
     {
-        GameService.OnStateChanged += StateHasChanged;
+        GameService.OnStateChanged += RefreshBoard;
         PieceThemeService.OnThemeChanged += StateHasChanged;
         await PieceThemeService.InitializeAsync();
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await AudioService.InitializeAsync();
+        }
     }
 
     protected override void OnParametersSet()
@@ -97,9 +106,16 @@
         UpdateBoardCache();
     }
 
+    private void RefreshBoard()
+    {
+        UpdateBoardCache();
+        _ = AudioService.PlayMove(); // Trigger sound
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
-        GameService.OnStateChanged -= StateHasChanged;
+        GameService.OnStateChanged -= RefreshBoard;
         PieceThemeService.OnThemeChanged -= StateHasChanged;
     }
 

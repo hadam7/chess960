@@ -774,7 +774,6 @@
             Multiplayer.OnDrawOffered += HandleDrawOffered;
             Multiplayer.OnDrawDeclined += HandleDrawDeclined;
             Multiplayer.OnServerStatsUpdated += HandleServerStats;
-            Multiplayer.OnChatMessageReceived += HandleChatMessageNotification;
             // Multiplayer.OnChallengeReceived removed from here
             Multiplayer.OnChallengeFailed += HandleChallengeFailed;
 
@@ -1170,12 +1169,8 @@
 
     private void HandleChatMessageNotification(string senderId, string message)
     {
-        Console.WriteLine($"[PlayOnline] Chat received: {senderId}: {message}");
-        // Create NEW list reference to force Blazor to re-render ChatArea
-        var newMsg = new ChatMessage(senderId, message, DateTime.Now);
-        var newList = new List<ChatMessage>(chatHistory);
-        newList.Insert(0, newMsg);
-        chatHistory = newList;
+        // Always add to history
+        chatHistory.Insert(0, new ChatMessage(senderId, message, DateTime.Now));
 
         if (activeTab != "chat")
         {

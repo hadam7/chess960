@@ -65,6 +65,12 @@ public class ChessGameService
         NotifyStateChanged();
     }
 
+    public void ResignGame(string reason = "Resigned")
+    {
+        GameOverMessage = reason;
+        NotifyStateChanged();
+    }
+
     public bool IsCheck => Game?.Pos.InCheck ?? false;
     public bool IsMate => Game?.Pos.IsMate ?? false;
     public bool IsStalemate => !IsCheck && !(Game?.Pos.GenerateMoves().Any() ?? false);

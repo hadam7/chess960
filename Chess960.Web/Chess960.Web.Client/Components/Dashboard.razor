@@ -1,0 +1,234 @@
+@using Chess960.Web.Client.Services
+@using Chess960.Web.Client.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ClientFriendService FriendService
+@inject NavigationManager Nav
+@rendermode InteractiveWebAssembly
+
+<div class="space-y-8 animate-soft-up">
+    <!-- Hero / Welcome -->
+    <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+        <div>
+            <h1 class="text-3xl font-display font-bold text-white">
+                Szia, <span class="text-transparent bg-clip-text bg-gradient-to-r from-theme-accent to-theme-glow">@username</span>! 👋
+            </h1>
+            <p class="text-theme-muted mt-2">Készen állsz egy újabb partira?</p>
+        </div>
+        
+        <!-- Stats Mini-Grid -->
+        <div class="flex gap-4">
+             <div class="px-6 py-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md flex flex-col items-center min-w-[100px]">
+                 <span class="text-xs font-bold text-theme-muted uppercase tracking-wider">Rating</span>
+                 <span class="text-2xl font-mono font-bold text-theme-accent">@eloRating</span>
+             </div>
+             <div class="px-6 py-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md flex flex-col items-center min-w-[100px]">
+                 <span class="text-xs font-bold text-theme-muted uppercase tracking-wider">Meccsek</span>
+                 <span class="text-2xl font-mono font-bold text-white">@gamesPlayed</span>
+             </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Play Bot (Neutral/Glass) -->
+        <button @onclick='() => Nav.NavigateTo("play-bot")' 
+                class="group relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 p-6 text-left transition-all hover:scale-[1.02] hover:bg-white/10 hover:shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+            <div class="absolute right-0 top-0 h-32 w-32 -mr-8 -mt-8 rounded-full bg-white/5 blur-2xl transition-all group-hover:bg-white/10"></div>
+            <span class="bi bi-robot text-4xl text-white mb-4 block relative z-10"></span>
+            <div class="relative z-10">
+                <h3 class="text-xl font-bold text-white">Játék Bot ellen</h3>
+                <p class="text-sm text-theme-muted mt-1">Gyakorolj Stockfish ellen tét nélkül.</p>
+            </div>
+        </button>
+
+        <!-- Play Online (Theme Accent) -->
+        <button @onclick='() => Nav.NavigateTo("lobby")' 
+                class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-theme-accent/20 to-theme-accent/5 border border-theme-accent/30 p-6 text-left transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(var(--color-accent),0.2)]">
+            <div class="absolute right-0 top-0 h-32 w-32 -mr-8 -mt-8 rounded-full bg-theme-accent/10 blur-2xl transition-all group-hover:bg-theme-accent/20"></div>
+            <span class="bi bi-globe text-4xl text-theme-accent mb-4 block relative z-10"></span>
+            <div class="relative z-10">
+                <h3 class="text-xl font-bold text-white">Online Játék</h3>
+                <p class="text-sm text-theme-accent/60 mt-1">Keress ellenfelet és mássz fel a ranglétrán.</p>
+            </div>
+        </button>
+
+        <!-- Friends (Theme Glow) -->
+        <button @onclick='() => Nav.NavigateTo("friends")' 
+                class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-theme-glow/20 to-theme-glow/5 border border-theme-glow/30 p-6 text-left transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(var(--color-glow),0.2)]">
+            <div class="absolute right-0 top-0 h-32 w-32 -mr-8 -mt-8 rounded-full bg-theme-glow/10 blur-2xl transition-all group-hover:bg-theme-glow/20"></div>
+            <span class="bi bi-people-fill text-4xl text-theme-glow mb-4 block relative z-10"></span>
+            <div class="relative z-10">
+                <h3 class="text-xl font-bold text-white">Barátok</h3>
+                <p class="text-sm text-theme-glow/60 mt-1">Kezeld a barátlistád és hívd ki őket.</p>
+            </div>
+        </button>
+    </div>
+
+    <!-- Active Friends Bar -->
+    <div class="glass-panel p-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <span class="bi bi-person-check-fill text-theme-accent"></span> Elérhető Barátok
+        </h3>
+        
+        @if (isLoadingFriends)
+        {
+            <div class="flex gap-4 animate-pulse">
+                @for(int i=0; i<3; i++) {
+                    <div class="w-12 h-12 rounded-full bg-white/10"></div>
+                }
+            </div>
+        }
+        else if (friends.Any(f => f.Status == "Online"))
+        {
+            <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                @foreach (var friend in friends.Where(f => f.Status == "Online"))
+                {
+                    <div class="flex flex-col items-center gap-2 group cursor-pointer min-w-[4rem]" @onclick='() => Nav.NavigateTo("friends")'>
+                        <div class="relative">
+                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-theme-accent to-theme-glow p-[2px] shadow-lg group-hover:scale-110 transition-transform">
+                                <div class="w-full h-full rounded-full bg-black flex items-center justify-center">
+                                    <span class="bi bi-person-fill text-xl text-white"></span>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
+                        </div>
+                        <span class="text-xs font-bold text-white truncate max-w-[5rem]">@friend.UserName</span>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-theme-muted text-sm italic">
+                Nincs elérhető barát jelenleg.
+            </div>
+        }
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="glass-panel p-6">
+        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <span class="bi bi-clock-history text-theme-accent"></span> Legutóbbi Aktivitás
+        </h3>
+
+        @if (recentGames == null)
+        {
+             <div class="animate-pulse space-y-3">
+                <div class="h-10 bg-white/5 rounded"></div>
+                <div class="h-10 bg-white/5 rounded"></div>
+            </div>
+        }
+        else if (recentGames.Any())
+        {
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="text-xs text-theme-muted uppercase border-b border-white/10">
+                            <th class="pb-3 pl-2">Ellenfél</th>
+                            <th class="pb-3 text-center">Eredmény</th>
+                            <th class="pb-3 text-right pr-2">Dátum</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        @foreach (var game in recentGames)
+                        {
+                            <tr class="hover:bg-white/5 transition-colors">
+                                <td class="py-3 pl-2 font-bold text-white">
+                                    @game.OpponentName
+                                </td>
+                                <td class="py-3 text-center">
+                                    @if(game.Result == "Won")
+                                    {
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-500/20 text-green-400 text-xs font-bold border border-green-500/30">
+                                            <span class="bi bi-trophy-fill"></span> NYERTES
+                                        </span>
+                                    }
+                                    else if(game.Result == "Lost")
+                                    {
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/30">
+                                            <span class="bi bi-x-circle-fill"></span> VESZTES
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-500/20 text-gray-400 text-xs font-bold border border-gray-500/30">
+                                            <span class="bi bi-circle-half"></span> DÖNTETLEN
+                                        </span>
+                                    }
+                                </td>
+                                <td class="py-3 text-right pr-2 text-theme-muted text-xs">
+                                    @game.DatePlayed.ToLocalTime().ToString("MMM dd, HH:mm")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-theme-muted text-sm italic">
+                Még nincs lejátszott mérkőzésed.
+            </div>
+        }
+    </div>
+</div>
+
+@inject HttpClient Http
+
+@code {
+    private string username = "Játékos";
+    private int eloRating = 1200;
+    private int gamesPlayed = 0;
+
+    private List<FriendDto> friends = new();
+    private List<GameHistoryDto>? recentGames;
+    private bool isLoadingFriends = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            // Fetch User Details including Stats
+            try 
+            {
+                var userStats = await Http.GetFromJsonAsync<UserDto>("api/user/me");
+                if (userStats != null)
+                {
+                    username = userStats.UserName;
+                    eloRating = userStats.EloRating;
+                    gamesPlayed = userStats.GamesPlayed;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching user stats: {ex.Message}");
+                // Fallback to claims if API fails
+                 username = user.Identity.Name ?? "Játékos";
+            }
+
+            // Load friends
+            try 
+            {
+                friends = await FriendService.GetFriendsAsync();
+            }
+            catch {}
+
+            // Load History
+            try
+            {
+                recentGames = await Http.GetFromJsonAsync<List<GameHistoryDto>>("api/user/history");
+            }
+            catch (Exception ex)
+            {
+                 Console.WriteLine($"Error fetching history: {ex.Message}");
+                 recentGames = new();
+            }
+        }
+        isLoadingFriends = false;
+    }
+}

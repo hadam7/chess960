@@ -9,19 +9,11 @@
 
 <div class="flex flex-col h-full bg-black/20 rounded-lg overflow-hidden border border-white/5 relative z-20">
     <!-- Messages Area -->
-    <div class="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent flex flex-col-reverse" id="chat-scroller">
-        @for (int i = 0; i < Messages.Count; i++)
+    <div class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent flex flex-col-reverse" id="chat-scroller">
+        @foreach (var msg in Messages)
         {
-            var msg = Messages[i];
             var isMe = msg.SenderId == Multiplayer.UserId;
-            
-            // Check previous message (which is at i + 1 because list/UI is reversed)
-            // If i+1 exists and sender is same, we want minimal gap.
-            // "mt" on THIS item (index i) pushes the item ABOVE it (index i+1) upwards.
-            var isSameSenderAbove = (i + 1 < Messages.Count) && Messages[i + 1].SenderId == msg.SenderId;
-            var marginClass = isSameSenderAbove ? "mt-1" : "mt-3";
-
-            <div class="flex flex-col @(isMe ? "items-end" : "items-start") @marginClass animate-in slide-in-from-bottom-2 fade-in duration-300">
+            <div class="flex flex-col @(isMe ? "items-end" : "items-start") animate-in slide-in-from-bottom-2 fade-in duration-300">
                 <div class="max-w-[85%] rounded-2xl px-3 py-2 text-xs break-words @(isMe ? "bg-theme-accent text-black rounded-tr-none font-bold" : "bg-white/10 text-white rounded-tl-none")">
                     @msg.Message
                 </div>
