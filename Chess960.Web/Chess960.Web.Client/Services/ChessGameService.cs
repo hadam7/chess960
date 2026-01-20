@@ -65,9 +65,30 @@ public class ChessGameService
         NotifyStateChanged();
     }
 
+    public bool? IsWhiteWinner { get; private set; } // null = running/draw, true = White, false = Black
+
     public void ResignGame(string reason = "Resigned")
     {
         GameOverMessage = reason;
+        // Assuming the player (User) is always White vs Bot, or we need to pass who resigned.
+        // For now, in PlayVsBot, User (White usually) resigns.
+        // If we want generic support, we should pass 'bool isWhiteResigning'.
+        // Let's assume IsWhiteSide parameter in PlayVsBot determines this.
+        // But here we don't know who is who.
+        // Let's overload or assume caller handles logic, but wait, this method sets state.
+        // I will change signature to ResignGame(bool isWhiteResigning, string reason) to be precise.
+        // But to avoid breaking callers, I'll default to "User (White?) resigned" ??
+        // Actually, PlayVsBot calls this. Let's simplisticly assume if this is called, the HUMAN resigned.
+        // If Human is White, White Resigned -> Black Wins.
+        IsWhiteWinner = false; // Default: User (White) resigned, Bot (Black) wins.
+        NotifyStateChanged();
+    }
+    
+    // Better overload
+    public void ResignGame(bool isWhiteResigning, string reason = "Resigned")
+    {
+        GameOverMessage = reason;
+        IsWhiteWinner = !isWhiteResigning;
         NotifyStateChanged();
     }
 
@@ -125,11 +146,14 @@ public class ChessGameService
         GameOverMessage = "";
         if (IsMate)
         {
-            var winner = Game.Pos.SideToMove.IsWhite ? "Black" : "White";
+            // If SideToMove is White, White is mated -> Black wins.
+            IsWhiteWinner = !Game.Pos.SideToMove.IsWhite;
+            var winner = IsWhiteWinner.Value ? "White" : "Black";
             GameOverMessage = $"Checkmate! {winner} wins.";
         }
         else if (IsStalemate)
         {
+             IsWhiteWinner = null; // Draw
             GameOverMessage = "Stalemate! Draw.";
         }
         else if (IsCheck)

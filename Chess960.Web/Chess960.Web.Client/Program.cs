@@ -16,6 +16,7 @@ builder.Services.AddScoped<ChessGameService>();
 builder.Services.AddScoped<MultiplayerService>();
 builder.Services.AddScoped<PieceThemeService>();
 builder.Services.AddScoped<ClientFriendService>();
+builder.Services.AddScoped<AudioService>();
 
 var host = builder.Build();
 

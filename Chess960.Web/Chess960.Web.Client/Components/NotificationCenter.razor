@@ -111,11 +111,11 @@
         // Optional: Send decline to server
     }
 
-    private void HandleGameStarted(string gameId, string fen, string whiteId, string blackId, long whiteTime, long blackTime, int wRating, int bRating)
+    private void HandleGameStarted(Chess960.Web.Client.Models.GameStartedDto dto)
     {
         // Global Navigation Logic
         // Navigate to PlayOnline with Game params
-        var url = $"/play-online?id={gameId}&fen={Uri.EscapeDataString(fen)}&white={whiteId}&black={blackId}";
+        var url = $"/play-online?id={dto.GameId}&fen={Uri.EscapeDataString(dto.Fen)}&white={dto.WhiteId}&black={dto.BlackId}";
         
         // Check if we are already there to avoid reload if not needed, but Nav.NavigateTo handles it.
         // If we are currently on PlayOnline, navigation might just update params.

@@ -52,6 +52,39 @@
                                         IsWhite="@char.IsUpper(piece)" 
                                         Theme="@PieceThemeService.CurrentTheme"
                                         Class="w-4/5 h-4/5 transition-transform hover:scale-110 z-10" />
+
+                             @* Game End Indicators *@
+                             @if (!string.IsNullOrEmpty(GameService.GameOverMessage) && char.ToUpper(piece) == 'K')
+                             {
+                                 var isPieceWhite = char.IsUpper(piece);
+                                 var winnerIsWhite = GameService.IsWhiteWinner;
+                                 
+                                 if (winnerIsWhite.HasValue) // Someone won
+                                 {
+                                     // Check if this king belongs to winner or loser
+                                     if (isPieceWhite == winnerIsWhite.Value)
+                                     {
+                                         // Winner
+                                         <div class="absolute top-0 right-0 w-6 h-6 rounded-full bg-green-500 border-2 border-white flex items-center justify-center z-50 shadow-lg animate-pulse">
+                                             <i class="bi bi-trophy-fill text-white text-[10px]"></i>
+                                         </div>
+                                     }
+                                     else
+                                     {
+                                         // Loser
+                                         <div class="absolute top-0 right-0 w-6 h-6 rounded-full bg-red-500 border-2 border-white flex items-center justify-center z-50 shadow-lg" title="Lost/Resigned">
+                                             <i class="bi bi-flag-fill text-white text-[10px]"></i>
+                                         </div>
+                                     }
+                                 }
+                                 else if (GameService.IsStalemate)
+                                 {
+                                     // Draw
+                                      <div class="absolute top-0 right-0 w-6 h-6 rounded-full bg-gray-500 border-2 border-white flex items-center justify-center z-50 shadow-lg">
+                                         <i class="bi bi-circle-half text-white text-[10px]"></i>
+                                     </div>
+                                 }
+                             }
                         }
 
                         @* Hint Dot *@
@@ -109,7 +142,23 @@
     private void RefreshBoard()
     {
         UpdateBoardCache();
-        _ = AudioService.PlayMove(); // Trigger sound
+        
+        if (GameService.IsMate)
+        {
+             _ = AudioService.PlayGameEnd();
+        }
+        else if (GameService.IsCheck)
+        {
+            _ = AudioService.PlayCheck();
+        }
+        else
+        {
+            // Only play move sound if game is NOT over (e.g. resignation shouldn't trigger move sound, but here we are usually triggering on move)
+            // But verify if state changed due to move or other event.
+            // For simple implementation, play move if not check/mate.
+            _ = AudioService.PlayMove();
+        }
+        
         StateHasChanged();
     }
 

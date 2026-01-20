@@ -65,6 +65,8 @@
         </button>
     </div>
 
+
+
     <!-- Active Friends Bar -->
     <div class="glass-panel p-6">
         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
@@ -87,7 +89,8 @@
                     <div class="flex flex-col items-center gap-2 group cursor-pointer min-w-[4rem]" @onclick='() => Nav.NavigateTo("friends")'>
                         <div class="relative">
                             <div class="w-12 h-12 rounded-full bg-gradient-to-br from-theme-accent to-theme-glow p-[2px] shadow-lg group-hover:scale-110 transition-transform">
-                                <div class="w-full h-full rounded-full bg-black flex items-center justify-center">
+                                <div class="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
+                                    @* Friend Avatar Logic needed here too realistically *@
                                     <span class="bi bi-person-fill text-xl text-white"></span>
                                 </div>
                             </div>
@@ -176,6 +179,7 @@
 </div>
 
 @inject HttpClient Http
+@using System.Net.Http.Headers
 
 @code {
     private string username = "Játékos";
@@ -232,3 +236,4 @@
         isLoadingFriends = false;
     }
 }
+

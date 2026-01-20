@@ -3,8 +3,14 @@
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @using Chess960.Web.Client.Services
 @using Chess960.Web.Client.Components
+@using Chess960.Web.Client.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Headers
 @inject IJSRuntime JSRuntime
 @inject PieceThemeService PieceThemeService
+@inject HttpClient Http
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Nav
 
 <div class="max-w-4xl mx-auto animate-soft-up">
     <div class="glass-panel p-8 mb-8">
@@ -22,9 +28,13 @@
                 class="px-6 py-3 rounded-full font-bold transition-all @(activeTab == "board" ? "bg-theme-accent text-black shadow-glow" : "bg-white/5 text-white hover:bg-white/10")">
             <span class="bi bi-grid-3x3-gap-fill mr-2"></span> Board
         </button>
-         <button @onclick="@(() => activeTab = "pieces")" 
+        <button @onclick="@(() => activeTab = "pieces")" 
                 class="px-6 py-3 rounded-full font-bold transition-all @(activeTab == "pieces" ? "bg-theme-accent text-black shadow-glow" : "bg-white/5 text-white hover:bg-white/10")">
             <span class="bi bi-suit-spade-fill mr-2"></span> Pieces
+        </button>
+         <button @onclick="@(() => activeTab = "account")" 
+                class="px-6 py-3 rounded-full font-bold transition-all @(activeTab == "account" ? "bg-theme-accent text-black shadow-glow" : "bg-white/5 text-white hover:bg-white/10")">
+            <span class="bi bi-person-circle mr-2"></span> Account
         </button>
     </div>
 
@@ -114,6 +124,78 @@
                 }
             </div>
         }
+        else if (activeTab == "account")
+        {
+            <h2 class="text-2xl font-display font-bold text-white mb-6 flex items-center gap-3 animate-fade-in">
+                <span class="bi bi-person-circle text-theme-accent"></span> Account Settings
+            </h2>
+
+            <div class="glass-panel p-8 max-w-xl animate-fade-in space-y-8">
+                <!-- Avatar Section -->
+                <div>
+                     <label class="text-xs text-theme-muted font-bold uppercase tracking-wider mb-4 block">Profile Picture</label>
+                     <div class="flex items-center gap-6">
+                        <div class="relative group w-24 h-24 flex-shrink-0">
+                            <div class="w-full h-full rounded-full bg-gradient-to-br from-theme-accent to-theme-glow flex items-center justify-center text-3xl font-bold text-black border-2 border-white/10 overflow-hidden shadow-lg">
+                                @if (!string.IsNullOrEmpty(profilePictureUrl))
+                                {
+                                    <img src="@profilePictureUrl" class="w-full h-full object-cover" />
+                                }
+                                else if (!string.IsNullOrEmpty(username))
+                                {
+                                    @username.Substring(0, 1).ToUpper()
+                                }
+                                else
+                                {
+                                    <span class="bi bi-person-fill text-white/50"></span>
+                                }
+                            </div>
+                            <label class="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity duration-200">
+                                <span class="bi bi-camera-fill text-white text-xl"></span>
+                                <InputFile OnChange="UploadAvatar" class="hidden" accept=".jpg,.png,.jpeg,.webp" />
+                            </label>
+                        </div>
+                        <div class="flxe-1">
+                             <p class="text-white font-bold mb-1">Change Avatar</p>
+                             <p class="text-sm text-theme-muted mb-3">Click the image to upload. Max 2MB.</p>
+                        </div>
+                     </div>
+                </div>
+
+                <div class="border-t border-white/10 pt-8">
+                    <label class="text-xs text-theme-muted font-bold uppercase tracking-wider mb-2 block">Username Profile</label>
+                <div class="flex gap-2">
+                        <input @bind="newUsername" disabled="@cannotChangeName" 
+                            class="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-theme-accent/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors placeholder-white/20"
+                            placeholder="New username" />
+                        <button @onclick="SaveUsername" disabled="@cannotChangeName" 
+                                class="bg-theme-accent text-black font-bold uppercase text-xs px-4 rounded-lg hover:brightness-110 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-lg">
+                            Save
+                        </button>
+                </div>
+                @if (cannotChangeName) {
+                    <div class="text-xs text-theme-muted mt-2 flex items-center gap-2 ">
+                        <span class="bi bi-clock-history"></span>
+                        <span>Next change: <span class="font-mono text-white">@nextChangeDate?.ToString("MMM dd, yyyy")</span></span>
+                    </div>
+                }
+                else 
+                {
+                    <div class="text-xs text-theme-muted mt-2 flex items-center gap-2">
+                        <span class="bi bi-info-circle"></span> You can change your username once every 30 days.
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(profileMessage))
+                {
+                    <div class="mt-4 text-sm p-3 rounded-lg border @(isProfileError ? "bg-red-500/10 border-red-500/30 text-red-400" : "bg-green-500/10 border-green-500/30 text-green-400") flex items-center gap-2 animate-fade-in">
+                        <span class="bi @(isProfileError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill")"></span>
+                        @profileMessage
+                    </div>
+                }
+            </div>
+        </div>
+    }
     </div>
 </div>
 
@@ -123,10 +205,24 @@
     private string currentBoardTheme = "default";
     private string currentPieceTheme = "standard";
 
+    // Account State
+    private string username = "";
+    private string profilePictureUrl = "";
+    private string newUsername = "";
+    private DateTime? nextChangeDate;
+    private bool cannotChangeName => nextChangeDate.HasValue && nextChangeDate.Value > DateTime.UtcNow;
+    private string profileMessage = "";
+    private bool isProfileError = false;
+
     // Data Models for Options
     record AppTheme(string Id, string Name, string GradientClasses);
     record BoardTheme(string Id, string Name, string WhiteColor, string BlackColor);
     record PieceTheme(string Id, string Name);
+    
+    // Response Models
+    private class UsernameResponse { public string Username { get; set; } = ""; }
+    private class AvatarResponse { public string Url { get; set; } = ""; }
+
 
     private List<AppTheme> appThemes = new()
     {
@@ -160,6 +256,15 @@
         new("cardinal", "Cardinal"),
     };
 
+    protected override void OnInitialized()
+    {
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+        if (uri.Query.Contains("tab=account"))
+        {
+            activeTab = "account";
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -174,8 +279,114 @@
                  await PieceThemeService.InitializeAsync();
                  currentPieceTheme = PieceThemeService.CurrentTheme;
             }
+             
+             // Initial Load of User Data
+             await LoadUserData();
 
             StateHasChanged();
+        }
+    }
+    
+    private async Task LoadUserData()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            try 
+            {
+                var userStats = await Http.GetFromJsonAsync<UserDto>("api/user/me");
+                if (userStats != null)
+                {
+                    username = userStats.UserName;
+                    newUsername = username;
+                    profilePictureUrl = userStats.ProfilePictureUrl;
+                    
+                    if (userStats.LastUsernameChange.HasValue)
+                    {
+                        var next = userStats.LastUsernameChange.Value.AddDays(30);
+                        if (next > DateTime.UtcNow) nextChangeDate = next;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching user stats: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task SaveUsername()
+    {
+        if (string.IsNullOrWhiteSpace(newUsername)) return;
+        
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/user/username", new { NewUsername = newUsername });
+             if (response.IsSuccessStatusCode)
+            {
+                 var result = await response.Content.ReadFromJsonAsync<UsernameResponse>();
+                 if (result != null)
+                 {
+                     username = result.Username;
+                     newUsername = username;
+                     profileMessage = "Username changed successfully!";
+                     isProfileError = false;
+                     nextChangeDate = DateTime.UtcNow.AddDays(30);
+                 }
+            }
+            else
+            {
+                 var error = await response.Content.ReadAsStringAsync();
+                profileMessage = "Error: " + error;
+                isProfileError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            profileMessage = "Error: " + ex.Message;
+            isProfileError = true;
+        }
+    }
+
+    private async Task UploadAvatar(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            if (file == null) return;
+
+            // Max 2MB
+            var maxFileSize = 2 * 1024 * 1024;
+            
+            using var content = new MultipartFormDataContent();
+            var fileContent = new StreamContent(file.OpenReadStream(maxFileSize));
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+            content.Add(fileContent, "file", file.Name);
+
+            var response = await Http.PostAsync("api/user/avatar", content);
+            if (response.IsSuccessStatusCode)
+            {
+                    var result = await response.Content.ReadFromJsonAsync<AvatarResponse>();
+                    if (result != null)
+                    {
+                        profilePictureUrl = result.Url;
+                        profileMessage = "Avatar updated successfully!";
+                        isProfileError = false;
+                        StateHasChanged();
+                    }
+            }
+            else
+            {
+                profileMessage = "Upload failed: " + response.ReasonPhrase;
+                isProfileError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            profileMessage = "Error: " + ex.Message;
+            isProfileError = true;
         }
     }
 

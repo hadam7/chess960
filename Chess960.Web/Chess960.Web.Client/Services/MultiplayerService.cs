@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.AspNetCore.Components;
+using Chess960.Web.Client.Models;
 
 namespace Chess960.Web.Services;
 
@@ -8,7 +9,7 @@ public class MultiplayerService : IAsyncDisposable
     private HubConnection? _hubConnection;
     private readonly NavigationManager _navigationManager;
 
-    public event Action<string, string, string, string, long, long, int, int>? OnGameStarted; // ..., whiteRating, blackRating
+    public event Action<GameStartedDto>? OnGameStarted;
     public event Action<string, string, long, long>? OnMoveMade;
     public event Action? OnWaitingForMatch;
     public event Action<string, string, string, int?, int?, int?, int?>? OnGameOver; // winnerId, reason, fen, wRating, bRating, wLow, bLow
@@ -19,6 +20,7 @@ public class MultiplayerService : IAsyncDisposable
     public event Action<string, string, string>? OnChallengeReceived; 
     public event Action<string>? OnChallengeFailed;
     public event Action<string, string>? OnFriendRequestReceived; // requesterId, requesterName
+    public event Action<string, string>? OnChatMessageReceived; // senderId, message
 
     public string? CurrentGameId { get; private set; }
     public string? MyConnectionId => _hubConnection?.ConnectionId;
@@ -52,10 +54,10 @@ public class MultiplayerService : IAsyncDisposable
             .WithAutomaticReconnect()
             .Build();
 
-        _hubConnection.On<string, string, string, string, long, long, int, int>("GameStarted", (gameId, fen, whiteId, blackId, whiteTime, blackTime, wRating, bRating) =>
+        _hubConnection.On<GameStartedDto>("GameStarted", (dto) =>
         {
-            CurrentGameId = gameId;
-            OnGameStarted?.Invoke(gameId, fen, whiteId, blackId, whiteTime, blackTime, wRating, bRating);
+            CurrentGameId = dto.GameId;
+            OnGameStarted?.Invoke(dto);
         });
 
         _hubConnection.On<string, string, long, long>("MoveMade", (move, fen, whiteTime, blackTime) =>
@@ -174,14 +176,7 @@ public class MultiplayerService : IAsyncDisposable
     {
         if (_hubConnection is not null)
         {
-            // requesterName handled by server lookup or passed here? Server can look it up if we passed ID, but easier if we pass name.
-            // Wait, we didn't add requesterName to SendChallenge in Hub. 
-            // In Hub: SendChallenge(string requesterId, string requesterName, string targetUserId, string timeControl)
-            // We need to pass our name.
              await _hubConnection.SendAsync("SendChallenge", UserId, "Me", targetUserId, timeControl); 
-             // "Me" is placeholder, better to let server fetch it or pass it correctly. 
-             // Let's rely on server fetching name or client passing it from state.
-             // Updated Plan: Pass name from client state.
         }
     }
 
@@ -209,9 +204,6 @@ public class MultiplayerService : IAsyncDisposable
         }
         return null;
     }
-
-    // Chat Event
-    public event Action<string, string>? OnChatMessageReceived; // senderId, message
 
     public async Task SendMessageAsync(string gameId, string message)
     {

@@ -28,6 +28,12 @@ public class AudioService : IAsyncDisposable
         if (_module != null) await _module.InvokeVoidAsync("playSound", "capture");
     }
 
+    public async Task PlayCheck()
+    {
+        // Use 'notify' sound for check
+        if (_module != null) await _module.InvokeVoidAsync("playSound", "notify");
+    }
+
     public async Task PlayGameStart()
     {
         if (_module != null) await _module.InvokeVoidAsync("playSound", "game-start");

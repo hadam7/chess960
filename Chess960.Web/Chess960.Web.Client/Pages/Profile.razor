@@ -1,0 +1,260 @@
+@page "/profile"
+@using Chess960.Web.Client.Services
+@using Chess960.Web.Client.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Net.Http.Headers
+@inject AuthenticationStateProvider AuthStateProvider
+@inject HttpClient Http
+@inject NavigationManager Nav
+@rendermode InteractiveWebAssembly
+
+<div class="max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8 animate-soft-up">
+
+    @if (isLoading)
+    {
+        <div class="flex justify-center items-center h-64">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-theme-accent"></div>
+        </div>
+    }
+    else
+    {
+        <!-- Header Section -->
+        <div class="glass-panel p-8 relative">
+            <a href="settings?tab=account" class="absolute top-4 right-4 p-2 rounded-lg hover:bg-white/10 text-theme-muted hover:text-white transition-colors" title="Settings">
+                <span class="bi bi-gear-fill text-xl"></span>
+            </a>
+
+            <div class="flex flex-col md:flex-row items-center gap-8">
+                <div class="relative group">
+                    <div class="w-32 h-32 rounded-full bg-gradient-to-br from-theme-accent to-theme-glow flex items-center justify-center text-5xl font-bold text-black shadow-[0_0_40px_rgba(var(--color-accent),0.4)] overflow-hidden">
+                        @if (!string.IsNullOrEmpty(profilePictureUrl))
+                        {
+                            <img src="@profilePictureUrl" class="w-full h-full object-cover" />
+                        }
+                        else if (!string.IsNullOrEmpty(username))
+                        {
+                            @username.Substring(0, 1).ToUpper()
+                        }
+                        else
+                        {
+                            <span class="bi bi-person-fill text-6xl text-white/50"></span>
+                        }
+                    </div>
+                </div>
+               
+                <div class="text-center md:text-left flex-1">
+                    <h1 class="text-5xl font-display font-bold text-white mb-2 tracking-tight">@username</h1>
+                    <div class="flex flex-col md:flex-row items-center gap-4 text-theme-muted font-medium text-lg justify-center md:justify-start">
+                         <span class="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                            <span class="w-2 h-2 rounded-full bg-theme-accent animate-pulse"></span> Online
+                        </span>
+                        <span class="hidden md:inline text-white/20">|</span>
+                         <span>Joined @DateTime.Now.ToString("yyyy")</span> 
+                    </div>
+                     <div class="mt-4 text-sm text-theme-muted">
+                        @if (!string.IsNullOrEmpty(profileMessage))
+                        {
+                            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg @(isProfileError ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-green-500/10 text-green-400 border-green-500/20") border">
+                                <span class="bi @(isProfileError ? "bi-exclamation-triangle-fill" : "bi-check-circle-fill")"></span>
+                                @profileMessage
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+            <!-- Bullet Elo -->
+            <div class="glass-panel p-6 group hover:bg-white/10 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest group-hover:text-white transition-colors">Bullet</p>
+                        <p class="text-4xl font-display font-bold text-white mt-2 group-hover:text-glow transition-all">@userDto.EloBullet</p>
+                    </div>
+                    <div class="text-white/20 group-hover:text-amber-400 transition-colors">
+                        <span class="bi bi-lightning-fill text-4xl"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blitz Elo -->
+            <div class="glass-panel p-6 group hover:bg-white/10 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest group-hover:text-white transition-colors">Blitz</p>
+                        <p class="text-4xl font-display font-bold text-white mt-2 group-hover:text-glow transition-all">@userDto.EloBlitz</p>
+                    </div>
+                    <div class="text-white/20 group-hover:text-orange-500 transition-colors">
+                        <span class="bi bi-fire text-4xl"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rapid Elo -->
+            <div class="glass-panel p-6 group hover:bg-white/10 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest group-hover:text-white transition-colors">Rapid</p>
+                        <p class="text-4xl font-display font-bold text-white mt-2 group-hover:text-glow transition-all">@userDto.EloRapid</p>
+                    </div>
+                    <div class="text-white/20 group-hover:text-green-400 transition-colors">
+                        <span class="bi bi-stopwatch-fill text-4xl"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Games Played Card -->
+            <div class="glass-panel p-6 group hover:bg-white/10 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest group-hover:text-white transition-colors">Games</p>
+                        <p class="text-4xl font-display font-bold text-white mt-2">@userDto.GamesPlayed</p>
+                    </div>
+                    <div class="text-white/20 group-hover:text-theme-accent transition-colors">
+                        <span class="bi bi-controller text-4xl"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Win Rate Card -->
+            <div class="glass-panel p-6 group hover:bg-white/10 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold text-theme-muted uppercase tracking-widest group-hover:text-white transition-colors">Win Rate</p>
+                        <p class="text-4xl font-display font-bold text-white mt-2">@GetWinRate(userDto)%</p>
+                    </div>
+                    <div class="text-white/20 group-hover:text-theme-accent transition-colors">
+                        <span class="bi bi-graph-up-arrow text-4xl"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="glass-panel p-8">
+            <h2 class="text-xl font-display font-bold text-white mb-6 border-b border-white/10 pb-4">Recent Activity</h2>
+            
+            @if (games == null)
+            {
+                    <div class="flex justify-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white/30"></div>
+                </div>
+            }
+            else if (games.Count == 0)
+            {
+                <div class="text-center py-12">
+                    <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-white/30 border border-white/10">
+                        <span class="bi bi-clock-history text-3xl"></span>
+                    </div>
+                    <p class="text-theme-muted font-medium">No recent games found.</p>
+                </div>
+            }
+            else
+            {
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-white/40 border-b border-white/5 text-xs uppercase tracking-wider">
+                                <th class="p-4 pl-0">Date</th>
+                                <th class="p-4">Opponent</th>
+                                <th class="p-4">Result</th>
+                                <th class="p-4 text-right pr-0">End Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-white/80">
+                            @foreach (var game in games)
+                            {
+                                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                                    <td class="p-4 pl-0 font-mono text-xs text-theme-muted">@game.DatePlayed.ToString("MMM dd HH:mm")</td>
+                                    <td class="p-4 font-bold text-white">
+                                        @game.OpponentName
+                                    </td>
+                                    <td class="p-4">
+                                        <span class="px-2 py-1 rounded text-xs font-bold uppercase tracking-wide @GetResultClass(game.Result)">
+                                            @game.Result
+                                        </span>
+                                    </td>
+                                    <td class="p-4 text-right pr-0 text-sm text-theme-muted">
+                                        @game.EndReason
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private bool isLoading = true;
+    private UserDto userDto = new();
+    private List<GameHistoryDto>? games;
+    
+    // Profile State
+    private string username = "";
+    private string profilePictureUrl = "";
+    private string profileMessage = "";
+    private bool isProfileError = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated ?? false)
+        {
+            try 
+            {
+                // Fetch User Stats
+                var details = await Http.GetFromJsonAsync<UserDto>("api/user/me");
+                if (details != null)
+                {
+                    userDto = details;
+                    username = details.UserName;
+                    profilePictureUrl = details.ProfilePictureUrl;
+                }
+
+                // Fetch History
+                games = await Http.GetFromJsonAsync<List<GameHistoryDto>>("api/user/history");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching profile data: {ex.Message}");
+                profileMessage = "Failed to load profile data.";
+                isProfileError = true;
+            }
+            finally
+            {
+                isLoading = false;
+            }
+        }
+        else
+        {
+            isLoading = false;
+            Nav.NavigateTo("/login");
+        }
+    }
+
+
+
+
+    
+    private int GetWinRate(UserDto u)
+    {
+        if (u.GamesPlayed == 0) return 0;
+        return (int)((double)u.GamesWon / u.GamesPlayed * 100);
+    }
+
+    private string GetResultClass(string result)
+    {
+        if (result == "Won") return "bg-green-500/20 text-green-400 border border-green-500/20";
+        if (result == "Lost") return "bg-red-500/20 text-red-400 border border-red-500/20";
+        return "bg-white/10 text-white/50 border border-white/10"; // Draw
+    }
+
+
+}

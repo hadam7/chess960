@@ -12,5 +12,8 @@ public class ApplicationUser : IdentityUser
     
     public int GamesPlayed { get; set; } = 0;
     public int GamesWon { get; set; } = 0;
+
+    public string ProfilePictureUrl { get; set; } = "";
+    public DateTime? LastUsernameChange { get; set; }
 }
 

@@ -29,7 +29,14 @@
                 <div class="flex items-center gap-3 min-w-0 flex-1">
                     <div class="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center border border-white/10 shadow-inner relative overflow-hidden group flex-shrink-0">
                         <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <span class="bi bi-person-fill text-xl text-white/40 relative z-10"></span>
+                        @if (!string.IsNullOrEmpty(OpponentAvatar))
+                        {
+                             <img src="@OpponentAvatar" class="w-full h-full object-cover z-10 relative" />
+                        }
+                        else
+                        {
+                            <span class="bi bi-person-fill text-xl text-white/40 relative z-10"></span>
+                        }
                     </div>
                     <div class="flex flex-col min-w-0 flex-1">
                         <div class="flex items-center gap-2">
@@ -159,7 +166,14 @@
                 <div class="flex items-center gap-3 min-w-0 flex-1">
                     <div class="w-9 h-9 rounded-lg bg-theme-accent flex items-center justify-center shadow-[0_0_15px_rgba(var(--color-accent),0.3)] relative overflow-hidden group flex-shrink-0">
                         <div class="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <span class="bi bi-person-fill text-xl text-black relative z-10"></span>
+                        @if (!string.IsNullOrEmpty(MyAvatar))
+                        {
+                             <img src="@MyAvatar" class="w-full h-full object-cover z-10 relative" />
+                        }
+                        else
+                        {
+                             <span class="bi bi-person-fill text-xl text-black relative z-10"></span>
+                        }
                     </div>
                     <div class="flex flex-col min-w-0 flex-1">
                         <div class="flex items-center gap-2">
@@ -774,6 +788,7 @@
             Multiplayer.OnDrawOffered += HandleDrawOffered;
             Multiplayer.OnDrawDeclined += HandleDrawDeclined;
             Multiplayer.OnServerStatsUpdated += HandleServerStats;
+            Multiplayer.OnChatMessageReceived += HandleChatMessageNotification;
             // Multiplayer.OnChallengeReceived removed from here
             Multiplayer.OnChallengeFailed += HandleChallengeFailed;
 
@@ -850,7 +865,7 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private void HandleGameStarted(string gameId, string fen, string whiteId, string blackId, long whiteTime, long blackTime, int wRating, int bRating)
+    private void HandleGameStarted(GameStartedDto dto)
     {
         // Cancel/Close any search UI
         isSearching = false;
@@ -861,47 +876,51 @@
         IsVictory = false;
         IsDraw = false;
         
-        GameId = gameId; // Set GameId for local use
+        GameId = dto.GameId; // Set GameId for local use
         
         // Setup Players
-        White = whiteId;
-        Black = blackId;
+        White = dto.WhiteId;
+        Black = dto.BlackId;
         
         // Set Ratings
-        WhiteRating = wRating;
-        BlackRating = bRating;
+        WhiteRating = dto.WhiteRating;
+        BlackRating = dto.BlackRating;
+        
+        // Set Avatars
+        WhiteAvatar = dto.WhiteAvatar;
+        BlackAvatar = dto.BlackAvatar;
         
         // IMPORTANT: Set Multiplayer.UserId if not set (from Auth context logic above)
         // Check game status (Determine colors)
         CheckGameStatus();
 
         // Start Game
-        GameService.StartGameFromFen(fen);
+        GameService.StartGameFromFen(dto.Fen);
         
         // Sync Time
-        WhiteTimeMs = whiteTime;
-        BlackTimeMs = blackTime;
+        WhiteTimeMs = dto.WhiteTimeMs;
+        BlackTimeMs = dto.BlackTimeMs;
         
         // Determine Opponent Name
-        if (Multiplayer.UserId == whiteId)
+        if (Multiplayer.UserId == dto.WhiteId)
         {
-             OpponentName = blackId;
+             OpponentName = dto.BlackId;
         }
         else
         {
-             OpponentName = whiteId;
+             OpponentName = dto.WhiteId;
         }
         
         moveList.Clear(); // New game
         
         // Init history
         fenHistory.Clear();
-        fenHistory.Add(fen);
+        fenHistory.Add(dto.Fen);
         currentViewIndex = 0;
         
         activeTab = "game";
 
-        Nav.NavigateTo($"/play-online?id={gameId}&fen={Uri.EscapeDataString(fen)}&white={whiteId}&black={blackId}", false);
+        Nav.NavigateTo($"/play-online?id={dto.GameId}&fen={Uri.EscapeDataString(dto.Fen)}&white={dto.WhiteId}&black={dto.BlackId}", false);
 
         CheckGameStatus();
         StateHasChanged();
@@ -1166,6 +1185,11 @@
         // Nav.NavigateTo("/");  -- User wants to stay on the game page
     }
 
+
+    private string? WhiteAvatar { get; set; }
+    private string? BlackAvatar { get; set; }
+    private string? MyAvatar => amIWhite ? WhiteAvatar : BlackAvatar;
+    private string? OpponentAvatar => amIWhite ? BlackAvatar : WhiteAvatar;
 
     private void HandleChatMessageNotification(string senderId, string message)
     {

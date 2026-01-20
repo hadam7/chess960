@@ -61,6 +61,7 @@ builder.Services.AddScoped<Chess960.Web.Services.FriendService>();
 builder.Services.AddScoped<Chess960.Web.Services.MultiplayerService>();
 builder.Services.AddScoped<Chess960.Web.Client.Services.ClientFriendService>();
 builder.Services.AddScoped<Chess960.Web.Client.Services.PieceThemeService>();
+builder.Services.AddScoped<Chess960.Web.Client.Services.AudioService>();
 builder.Services.AddSingleton<Chess960.Web.Services.IConnectionTracker, Chess960.Web.Services.ConnectionTracker>();
 builder.Services.AddScoped(sp => new HttpClient());
 
