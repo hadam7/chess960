@@ -1,5 +1,6 @@
 @using Chess960.Web.Services
 @using Chess960.Web.Client.Services
+@using Chess960.Web.Client.Models
 @inject MultiplayerService Multiplayer
 @inject AuthenticationStateProvider AuthStateProvider
 @implements IAsyncDisposable
@@ -8,18 +9,26 @@
 
 <div class="flex flex-col h-full bg-black/20 rounded-lg overflow-hidden border border-white/5 relative z-20">
     <!-- Messages Area -->
-    <div class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent flex flex-col-reverse" id="chat-scroller">
-        @foreach (var msg in messages)
+    <div class="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent flex flex-col-reverse" id="chat-scroller">
+        @for (int i = 0; i < Messages.Count; i++)
         {
+            var msg = Messages[i];
             var isMe = msg.SenderId == Multiplayer.UserId;
-            <div class="flex flex-col @(isMe ? "items-end" : "items-start") animate-in slide-in-from-bottom-2 fade-in duration-300">
+            
+            // Check previous message (which is at i + 1 because list/UI is reversed)
+            // If i+1 exists and sender is same, we want minimal gap.
+            // "mt" on THIS item (index i) pushes the item ABOVE it (index i+1) upwards.
+            var isSameSenderAbove = (i + 1 < Messages.Count) && Messages[i + 1].SenderId == msg.SenderId;
+            var marginClass = isSameSenderAbove ? "mt-1" : "mt-3";
+
+            <div class="flex flex-col @(isMe ? "items-end" : "items-start") @marginClass animate-in slide-in-from-bottom-2 fade-in duration-300">
                 <div class="max-w-[85%] rounded-2xl px-3 py-2 text-xs break-words @(isMe ? "bg-theme-accent text-black rounded-tr-none font-bold" : "bg-white/10 text-white rounded-tl-none")">
                     @msg.Message
                 </div>
                 <!-- Optional: Sender Name logic requires looking up name, for now just distinguish by color -->
             </div>
         }
-        @if (messages.Count == 0)
+        @if (Messages.Count == 0)
         {
             <div class="text-center text-white/20 text-xs italic mt-4">
                 Írj valamit...
@@ -54,25 +63,20 @@
     // Let's stick to standard behavior: flex-col (normal). We need JS to scroll to bottom.
     // OR: flex-col-reverse and we Insert(0, msg). Then Newest is at index 0 (Bottom).
     
-    private List<ChatMessage> messages = new();
+    [Parameter] public List<ChatMessage> Messages { get; set; } = new();
     private string newMessage = "";
 
     protected override void OnInitialized()
     {
-        Multiplayer.OnChatMessageReceived += HandleMessageReceived;
+        // Handled by parent
     }
 
     public async ValueTask DisposeAsync()
     {
-        Multiplayer.OnChatMessageReceived -= HandleMessageReceived;
+        // Handled by parent
     }
 
-    private void HandleMessageReceived(string senderId, string message)
-    {
-        // Add to TOP (Index 0) because we use flex-col-reverse
-        messages.Insert(0, new ChatMessage(senderId, message, DateTime.Now));
-        InvokeAsync(StateHasChanged);
-    }
+    // HandleMessageReceived removed - Parent keeps state
 
     private async Task SendMessage()
     {
@@ -94,6 +98,4 @@
             await SendMessage();
         }
     }
-
-    private record ChatMessage(string SenderId, string Message, DateTime Timestamp);
 }

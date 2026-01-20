@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+// Trigger Rebuild
 using Microsoft.AspNetCore.Components.Authorization;
 using Chess960.Web.Client.Services;
 using Chess960.Web.Services;
