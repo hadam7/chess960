@@ -12,6 +12,28 @@ public class GameManager
     // Key: TimeControl (e.g., "3+2"), Value: List of waiting players (Locked for access)
     private readonly ConcurrentDictionary<string, List<MatchTicket>> _waitingLists = new();
 
+    // Key: UserId, Value: ConnectionId (Tracks online users)
+    private readonly ConcurrentDictionary<string, string> _userConnections = new();
+
+    public void RegisterUser(string userId, string connectionId)
+    {
+        Console.WriteLine($"[GameManager] RegisterUser: {userId} -> {connectionId}");
+        _userConnections[userId] = connectionId;
+    }
+
+    public void UnregisterUser(string userId)
+    {
+        Console.WriteLine($"[GameManager] UnregisterUser: {userId}");
+        _userConnections.TryRemove(userId, out _);
+    }
+    
+    public string? GetConnectionId(string userId)
+    {
+        _userConnections.TryGetValue(userId, out var connId);
+        // Console.WriteLine($"[GameManager] GetConnectionId for {userId} returns {connId ?? "NULL"}");
+        return connId;
+    }
+
     public GameSession? FindMatch(string playerConnectionId, string userId, string timeControl, int userRating, int ratingRange)
     {
         var list = _waitingLists.GetOrAdd(timeControl, _ => new List<MatchTicket>());

@@ -69,11 +69,11 @@ public class GameHub : Hub
 
         int currentRating = 1200; // Default
         if (timeControl.Contains("1+") || timeControl.Contains("2+"))
-            currentRating = user.BulletRating;
+            currentRating = user.EloBullet;
         else if (timeControl.Contains("3+") || timeControl.Contains("5+"))
-            currentRating = user.BlitzRating;
+            currentRating = user.EloBlitz;
         else
-            currentRating = user.RapidRating;
+            currentRating = user.EloRapid;
 
         var session = _gameManager.FindMatch(Context.ConnectionId, userId, timeControl, currentRating, ratingRange);
         
