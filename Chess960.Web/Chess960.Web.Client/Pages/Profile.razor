@@ -133,9 +133,11 @@
         </div>
 
         <!-- Recent Activity -->
-        <div class="glass-panel p-8">
-            <h2 class="text-xl font-display font-bold text-white mb-6 border-b border-white/10 pb-4">Recent Activity</h2>
-            
+        <div class="glass-panel p-6">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <span class="bi bi-clock-history text-theme-accent"></span> Recent Activity
+            </h3>
+
             @if (games == null)
             {
                     <div class="flex justify-center py-8">
@@ -145,39 +147,59 @@
             else if (games.Count == 0)
             {
                 <div class="text-center py-12">
-                    <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-white/30 border border-white/10">
+                     <div class="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-white/30 border border-white/10">
                         <span class="bi bi-clock-history text-3xl"></span>
                     </div>
-                    <p class="text-theme-muted font-medium">No recent games found.</p>
-                </div>
+                     <p class="text-theme-muted font-medium">No recent games found.</p>
+                 </div>
             }
             else
             {
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+                    <table class="w-full text-left text-sm">
                         <thead>
-                            <tr class="text-white/40 border-b border-white/5 text-xs uppercase tracking-wider">
-                                <th class="p-4 pl-0">Date</th>
-                                <th class="p-4">Opponent</th>
-                                <th class="p-4">Result</th>
-                                <th class="p-4 text-right pr-0">End Reason</th>
+                            <tr class="text-xs text-theme-muted uppercase border-b border-white/10">
+                                <th class="pb-3 pl-2">Time</th>
+                                <th class="pb-3 pl-2">Opponent</th>
+                                <th class="pb-3 text-center">Result</th>
+                                <th class="pb-3 text-right pr-2">Date</th>
                             </tr>
                         </thead>
-                        <tbody class="text-white/80">
+                        <tbody class="divide-y divide-white/5">
                             @foreach (var game in games)
                             {
-                                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors group">
-                                    <td class="p-4 pl-0 font-mono text-xs text-theme-muted">@game.DatePlayed.ToString("MMM dd HH:mm")</td>
-                                    <td class="p-4 font-bold text-white">
+                                <tr class="hover:bg-white/5 transition-colors cursor-pointer" @onclick='() => Nav.NavigateTo($"/replay/{game.Id}")'>
+                                    <td class="py-3 pl-2">
+                                        <div class="flex items-center gap-2" title="@game.TimeControl">
+                                            <span class="@GetTimeIconClass(game.TimeControl)"></span>
+                                            <span class="text-xs font-bold text-white/70">@GetFormattedTime(game.TimeControl)</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3 pl-2 font-bold text-white">
                                         @game.OpponentName
                                     </td>
-                                    <td class="p-4">
-                                        <span class="px-2 py-1 rounded text-xs font-bold uppercase tracking-wide @GetResultClass(game.Result)">
-                                            @game.Result
-                                        </span>
+                                    <td class="py-3 text-center">
+                                        @if(game.Result == "Won")
+                                        {
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-500/20 text-green-400 text-xs font-bold border border-green-500/30">
+                                                <span class="bi bi-trophy-fill"></span> WON
+                                            </span>
+                                        }
+                                        else if(game.Result == "Lost")
+                                        {
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/30">
+                                                <span class="bi bi-x-circle-fill"></span> LOST
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-500/20 text-gray-400 text-xs font-bold border border-gray-500/30">
+                                                <span class="bi bi-circle-half"></span> DRAW
+                                            </span>
+                                        }
                                     </td>
-                                    <td class="p-4 text-right pr-0 text-sm text-theme-muted">
-                                        @game.EndReason
+                                    <td class="py-3 text-right pr-2 text-theme-muted text-xs">
+                                        @game.DatePlayed.ToLocalTime().ToString("MMM dd, HH:mm")
                                     </td>
                                 </tr>
                             }
@@ -240,21 +262,44 @@
     }
 
 
-
-
-    
     private int GetWinRate(UserDto u)
     {
         if (u.GamesPlayed == 0) return 0;
         return (int)((double)u.GamesWon / u.GamesPlayed * 100);
     }
-
-    private string GetResultClass(string result)
+    
+    // Helper methods for activity matching Dashboard.razor
+    private string GetTimeIconClass(string tc)
     {
-        if (result == "Won") return "bg-green-500/20 text-green-400 border border-green-500/20";
-        if (result == "Lost") return "bg-red-500/20 text-red-400 border border-red-500/20";
-        return "bg-white/10 text-white/50 border border-white/10"; // Draw
+        if (string.IsNullOrEmpty(tc)) return "bi bi-question-circle text-gray-500";
+        
+        var parts = tc.Split('+');
+        if (parts.Length > 0 && double.TryParse(parts[0], out double timeVal))
+        {
+            // If time is large (>= 60), assume seconds. If small (< 60), assume minutes.
+            double totalMinutes = timeVal >= 60 ? timeVal / 60 : timeVal;
+
+            if (totalMinutes < 3) return "bi bi-rocket-takeoff-fill text-yellow-400"; // Bullet (< 3m) -> Rocket
+            if (totalMinutes < 10) return "bi bi-lightning-fill text-amber-500"; // Blitz (3-9m) -> Lightning
+            return "bi bi-stopwatch-fill text-emerald-400"; // Rapid (>= 10m) -> Stopwatch
+        }
+        return "bi bi-hourglass text-gray-400";
     }
 
+    private string GetFormattedTime(string tc)
+    {
+        if (string.IsNullOrEmpty(tc)) return "-";
+        
+        var parts = tc.Split('+');
+        if (parts.Length > 0 && double.TryParse(parts[0], out double timeVal))
+        {
+            double totalMinutes = timeVal >= 60 ? timeVal / 60 : timeVal;
+            string increment = parts.Length > 1 ? parts[1] : "0";
+
+            if (increment == "0") return $"{totalMinutes}";
+            return $"{totalMinutes}|{increment}";
+        }
+        return tc.Replace("+", "|");
+    }
 
 }

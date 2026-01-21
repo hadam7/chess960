@@ -205,6 +205,15 @@ public class MultiplayerService : IAsyncDisposable
         return null;
     }
 
+    public async Task<GameStartedDto?> GetActiveGameAsync()
+    {
+         if (_hubConnection is not null)
+        {
+             return await _hubConnection.InvokeAsync<GameStartedDto?>("GetActiveGame", UserId);
+        }
+        return null;
+    }
+
     public async Task SendMessageAsync(string gameId, string message)
     {
         if (_hubConnection is not null)

@@ -27,18 +27,19 @@ window.initAnimatedBackground = function (containerOrId) {
         el.src = `/images/pieces/merida/w${pieceType}.svg`;
         el.style.position = 'absolute';
 
-        // MONOCHROME: Just opacity, no color filters
-        el.style.opacity = '0.15';
+        // Subtle background pieces (No Glow)
+        el.style.opacity = '0.08';
+        el.style.filter = 'grayscale(100%)'; // Ensure they are neutral
         el.style.pointerEvents = 'none';
 
         // Random initial state
         const state = {
             x: Math.random() * 100, // %
-            y: 110 + Math.random() * 50, // Start below
-            speed: 0.03 + Math.random() * 0.03, // Moderate speed
+            y: -20 - Math.random() * 50, // Start ABOVE viewport
+            speed: 0.02 + Math.random() * 0.04, // Falling speed
             rotation: Math.random() * 360,
-            rotationSpeed: (Math.random() - 0.5) * 0.3,
-            size: 40 + Math.random() * 80, // px
+            rotationSpeed: (Math.random() - 0.5) * 0.5,
+            size: 30 + Math.random() * 60, // px
             el: el
         };
 
@@ -47,7 +48,8 @@ window.initAnimatedBackground = function (containerOrId) {
         el.style.left = `${state.x}%`;
 
         // Initial transform
-        el.style.transform = `translateY(100vh)`;
+        const yPx = window.innerHeight * (state.y / 100);
+        el.style.transform = `translate3d(0, ${yPx}px, 0)`;
 
         container.appendChild(el);
         elements.push(state);
@@ -60,18 +62,22 @@ window.initAnimatedBackground = function (containerOrId) {
         if (!lastTime) lastTime = timestamp;
 
         for (const item of elements) {
-            // Update position
-            item.y -= item.speed;
+            // Update position (FALLING DOWN)
+            item.y += item.speed;
             item.rotation += item.rotationSpeed;
 
-            // Reset
-            if (item.y < -20) {
-                item.y = 110;
+            // Reset when it goes below screen
+            if (item.y > 110) {
+                item.y = -20;
                 item.x = Math.random() * 100;
             }
 
             // Apply transform (GPU accelerated)
-            const yPx = window.innerHeight * (item.y / 100) - window.innerHeight;
+            // y is percentage of screen height? 
+            // Previous logic: window.innerHeight * (item.y / 100) - window.innerHeight; was weird.
+            // Let's just map y% to pixels directly. 0% = top, 100% = bottom.
+            const yPx = window.innerHeight * (item.y / 100);
+
             item.el.style.transform = `translate3d(0, ${yPx}px, 0) rotate(${item.rotation}deg)`;
             item.el.style.left = `${item.x}%`;
         }

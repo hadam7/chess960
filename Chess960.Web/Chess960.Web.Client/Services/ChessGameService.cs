@@ -169,5 +169,132 @@ public class ChessGameService
         return Game?.Pos.FenNotation ?? "";
     }
 
+    public string GetSanForMove(string fen, string lanMove)
+    {
+        try 
+        {
+            // Create temp game to validate and generate SAN
+            var tempGame = GameFactory.Create(fen);
+            var fromSquare = new Square(lanMove.Substring(0, 2));
+            var toSquare = new Square(lanMove.Substring(2, 2));
+            
+            // Generate valid moves from this position
+            var moves = tempGame.Pos.GenerateMoves();
+            var move = moves.FirstOrDefault(m => m.Move.FromSquare() == fromSquare && m.Move.ToSquare() == toSquare);
+            
+            if (lanMove.Length > 4) // Promotion
+            {
+                 // Handle promotion selection if needed, or assume Queen if not specified? 
+                 // LAN usually includes promotion char e.g. a7a8q
+                 // We should match strict if provided
+                 char promoChar = lanMove[4];
+                 PieceTypes promoType = GetPromoType(promoChar);
+                 move = moves.FirstOrDefault(m => m.Move.FromSquare() == fromSquare && m.Move.ToSquare() == toSquare && m.Move.PromotedPieceType() == promoType);
+            }
+
+            if (!move.Move.Equals(default(Move)))
+            {
+                // Generate SAN
+                return GenerateSan(tempGame, move.Move);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error generating SAN for {lanMove}: {ex.Message}");
+        }
+        return lanMove; // Fallback to LAN
+    }
+
+    private PieceTypes GetPromoType(char c)
+    {
+        return char.ToLower(c) switch 
+        {
+            'q' => PieceTypes.Queen,
+            'r' => PieceTypes.Rook,
+            'b' => PieceTypes.Bishop,
+            'n' => PieceTypes.Knight,
+            _ => PieceTypes.Queen
+        };
+    }
+
+    private string GenerateSan(IGame game, Move move)
+    {
+        // Manual SAN generation (simplified for now, Rudzoft might lack full SAN generator in this version)
+        var piece = game.Pos.GetPiece(move.FromSquare());
+        var pieceType = piece.Type();
+        var isCapture = game.Pos.GetPiece(move.ToSquare()) != Piece.EmptyPiece;
+        
+        // Check for En Passant capture
+        if (pieceType == PieceTypes.Pawn && move.IsEnPassantMove()) isCapture = true;
+
+        // Castling
+        if (pieceType == PieceTypes.King && Math.Abs(move.ToSquare().File.Value - move.FromSquare().File.Value) > 1)
+        {
+             return move.ToSquare().File.Value > move.FromSquare().File.Value ? "O-O" : "O-O-O";
+        }
+
+        string san = "";
+        
+        if (pieceType != PieceTypes.Pawn)
+        {
+            san += char.ToUpper(GetPieceChar(pieceType));
+        }
+
+        // Ambiguity resolution (simplified - strictly correct needed for real chess but ok for now)
+        // If multiple pieces of same type can move to same square...
+        // We will skip full ambiguity check for MVP unless user complains or we want perfection.
+        // Let's add simple File disambiguation if multiple pieces of same type can reach target.
+        var ambiguous = game.Pos.GenerateMoves()
+            .Where(m => m.Move.ToSquare() == move.ToSquare() && m.Move.FromSquare() != move.FromSquare() && game.Pos.GetPiece(m.Move.FromSquare()).Type() == pieceType)
+            .Any();
+            
+        if (ambiguous && pieceType != PieceTypes.Pawn)
+        {
+            // Disambiguate by File
+            if (game.Pos.GenerateMoves().Count(m => m.Move.ToSquare() == move.ToSquare() && game.Pos.GetPiece(m.Move.FromSquare()).Type() == pieceType && m.Move.FromSquare().File == move.FromSquare().File) > 0)
+            {
+                 // Files same, use Rank
+                 san += move.FromSquare().Rank.Char;
+            }
+            else
+            {
+                 san += move.FromSquare().File.Char;
+            }
+        }
+        else if (isCapture && pieceType == PieceTypes.Pawn)
+        {
+            san += move.FromSquare().File.Char;
+        }
+
+        if (isCapture) san += "x";
+        
+        san += move.ToSquare().ToString();
+
+        if (move.IsPromotionMove())
+        {
+            san += "=" + char.ToUpper(GetPieceChar(move.PromotedPieceType()));
+        }
+
+        // Make move to check for Check/Mate
+        game.Pos.MakeMove(move, game.Pos.State);
+        if (game.Pos.IsMate) san += "#";
+        else if (game.Pos.InCheck) san += "+";
+
+        return san;
+    }
+
+    private char GetPieceChar(PieceTypes type)
+    {
+        return type switch
+        {
+            PieceTypes.Knight => 'N',
+            PieceTypes.Bishop => 'B',
+            PieceTypes.Rook => 'R',
+            PieceTypes.Queen => 'Q',
+            PieceTypes.King => 'K',
+            _ => ' '
+        };
+    }
+
     private void NotifyStateChanged() => OnStateChanged?.Invoke();
 }

@@ -156,6 +156,46 @@ public class GameHub : Hub
         return false;
     }
 
+    public async Task<Chess960.Web.Client.Models.GameStartedDto?> GetActiveGame(string userId)
+    {
+        // Security check - ensure requester is who they say they are
+        if (userId != Context.UserIdentifier) return null;
+
+        var session = _gameManager.GetActiveGameForUser(userId);
+        if (session != null)
+        {
+            // Re-join the group to ensure they receive updates
+            await Groups.AddToGroupAsync(Context.ConnectionId, session.GameId);
+            
+            // Re-register user connection if needed (likely handled by OnConnected but just in case)
+             _gameManager.JoinGame(session.GameId, Context.ConnectionId, userId);
+
+            var (whiteRating, blackRating) = await _eloService.GetRatingsAsync(session.WhiteUserId, session.BlackUserId, session.TimeControl);
+            
+            var whiteUser = await _userManager.FindByIdAsync(session.WhiteUserId);
+            var blackUser = await _userManager.FindByIdAsync(session.BlackUserId ?? "");
+            string? whiteAvatar = whiteUser?.ProfilePictureUrl;
+            string? blackAvatar = blackUser?.ProfilePictureUrl;
+
+            return new Chess960.Web.Client.Models.GameStartedDto
+            {
+                GameId = session.GameId,
+                Fen = session.Game.Pos.FenNotation,
+                WhiteId = session.WhiteUserId,
+                BlackId = session.BlackUserId ?? "",
+                WhiteTimeMs = session.WhiteTimeRemainingMs,
+                BlackTimeMs = session.BlackTimeRemainingMs,
+                WhiteRating = whiteRating,
+                BlackRating = blackRating,
+                WhiteAvatar = whiteAvatar,
+                BlackAvatar = blackAvatar,
+                WhiteName = whiteUser?.UserName ?? "White",
+                BlackName = blackUser?.UserName ?? "Black"
+            };
+        }
+        return null;
+    }
+
     public async Task MakeMove(string gameId, string move, string userId)
     {
         Console.WriteLine($"[Hub] MakeMove: Game={gameId}, Move={move}. Caller={Context.UserIdentifier}, ParamUser={userId}");
@@ -196,6 +236,25 @@ public class GameHub : Hub
                await HandleGameOver(session, moveResult);
             }
         }
+    }
+
+    public async Task SendChallenge(string requesterId, string requesterName, string targetUserId, string timeControl)
+    {
+        Console.WriteLine($"[Hub] SendChallenge: From error={requesterName} ({requesterId}) to {targetUserId}");
+        
+        var targetConnId = _gameManager.GetConnectionId(targetUserId);
+        if (string.IsNullOrEmpty(targetConnId))
+        {
+             Console.WriteLine($"[Hub] Target {targetUserId} not found or offline.");
+             await Clients.Caller.SendAsync("ChallengeFailed", "User is offline.");
+             return;
+        }
+
+        // Forward to target
+        await Clients.Client(targetConnId).SendAsync("ChallengeReceived", requesterId, requesterName, timeControl);
+        
+        // Notify caller it was sent (optional, mostly for debugging or UI feedback)
+        // await Clients.Caller.SendAsync("ChallengeSent", targetUserId);
     }
 
     public async Task RespondToChallenge(string requesterId, string targetUserId, bool accept, string timeControl)

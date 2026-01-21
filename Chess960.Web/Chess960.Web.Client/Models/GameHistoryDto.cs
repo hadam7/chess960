@@ -6,5 +6,6 @@ public class GameHistoryDto
     public string OpponentName { get; set; } = string.Empty;
     public string Result { get; set; } = string.Empty; // "Won", "Lost", "Draw"
     public string EndReason { get; set; } = string.Empty; // "Checkmate", "Time", etc
+    public string TimeControl { get; set; } = string.Empty;
     public DateTime DatePlayed { get; set; }
 }

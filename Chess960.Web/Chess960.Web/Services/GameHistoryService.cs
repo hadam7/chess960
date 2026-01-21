@@ -36,7 +36,8 @@ public class GameHistoryService
             EndReason = endReason.ToString(),
             MovesPgn = string.Join(" ", session.Moves), 
             Fen = session.Game.Pos.FenNotation,
-            InitialFen = session.InitialFen
+            InitialFen = session.InitialFen,
+            TimeControl = session.TimeControl
         };
         
 

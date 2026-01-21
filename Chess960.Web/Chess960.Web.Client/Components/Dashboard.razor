@@ -43,7 +43,7 @@
         </button>
 
         <!-- Play Online (Theme Accent) -->
-        <button @onclick='() => Nav.NavigateTo("lobby")' 
+        <button @onclick='() => Nav.NavigateTo("play-online")' 
                 class="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-theme-accent/20 to-theme-accent/5 border border-theme-accent/30 p-6 text-left transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(var(--color-accent),0.2)]">
             <div class="absolute right-0 top-0 h-32 w-32 -mr-8 -mt-8 rounded-full bg-theme-accent/10 blur-2xl transition-all group-hover:bg-theme-accent/20"></div>
             <span class="bi bi-globe text-4xl text-theme-accent mb-4 block relative z-10"></span>
@@ -67,47 +67,7 @@
 
 
 
-    <!-- Active Friends Bar -->
-    <div class="glass-panel p-6">
-        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span class="bi bi-person-check-fill text-theme-accent"></span> Online Friends
-        </h3>
-        
-        @if (isLoadingFriends)
-        {
-            <div class="flex gap-4 animate-pulse">
-                @for(int i=0; i<3; i++) {
-                    <div class="w-12 h-12 rounded-full bg-white/10"></div>
-                }
-            </div>
-        }
-        else if (friends.Any(f => f.Status == "Online"))
-        {
-            <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                @foreach (var friend in friends.Where(f => f.Status == "Online"))
-                {
-                    <div class="flex flex-col items-center gap-2 group cursor-pointer min-w-[4rem]" @onclick='() => Nav.NavigateTo("friends")'>
-                        <div class="relative">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-theme-accent to-theme-glow p-[2px] shadow-lg group-hover:scale-110 transition-transform">
-                                <div class="w-full h-full rounded-full bg-black flex items-center justify-center overflow-hidden">
-                                    @* Friend Avatar Logic needed here too realistically *@
-                                    <span class="bi bi-person-fill text-xl text-white"></span>
-                                </div>
-                            </div>
-                            <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black"></div>
-                        </div>
-                        <span class="text-xs font-bold text-white truncate max-w-[5rem]">@friend.UserName</span>
-                    </div>
-                }
-            </div>
-        }
-        else
-        {
-            <div class="text-theme-muted text-sm italic">
-                No friends online.
-            </div>
-        }
-    </div>
+
 
     <!-- Recent Activity -->
     <div class="glass-panel p-6">
@@ -128,6 +88,7 @@
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr class="text-xs text-theme-muted uppercase border-b border-white/10">
+                            <th class="pb-3 pl-2">Time</th>
                             <th class="pb-3 pl-2">Opponent</th>
                             <th class="pb-3 text-center">Result</th>
                             <th class="pb-3 text-right pr-2">Date</th>
@@ -136,7 +97,13 @@
                     <tbody class="divide-y divide-white/5">
                         @foreach (var game in recentGames)
                         {
-                            <tr class="hover:bg-white/5 transition-colors">
+                            <tr class="hover:bg-white/5 transition-colors cursor-pointer" @onclick='() => Nav.NavigateTo($"/replay/{game.Id}")'>
+                                <td class="py-3 pl-2">
+                                    <div class="flex items-center gap-2" title="@game.TimeControl">
+                                        <span class="@GetTimeIconClass(game.TimeControl)"></span>
+                                        <span class="text-xs font-bold text-white/70">@GetFormattedTime(game.TimeControl)</span>
+                                    </div>
+                                </td>
                                 <td class="py-3 pl-2 font-bold text-white">
                                     @game.OpponentName
                                 </td>
@@ -186,9 +153,7 @@
     private int eloRating = 1200;
     private int gamesPlayed = 0;
 
-    private List<FriendDto> friends = new();
     private List<GameHistoryDto>? recentGames;
-    private bool isLoadingFriends = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -215,12 +180,7 @@
                  username = user.Identity.Name ?? "Player";
             }
 
-            // Load friends
-            try 
-            {
-                friends = await FriendService.GetFriendsAsync();
-            }
-            catch {}
+
 
             // Load History
             try
@@ -233,7 +193,40 @@
                  recentGames = new();
             }
         }
-        isLoadingFriends = false;
+
+    }
+
+    private string GetTimeIconClass(string tc)
+    {
+        if (string.IsNullOrEmpty(tc)) return "bi bi-question-circle text-gray-500";
+        
+        var parts = tc.Split('+');
+        if (parts.Length > 0 && double.TryParse(parts[0], out double timeVal))
+        {
+            // If time is large (>= 60), assume seconds. If small (< 60), assume minutes.
+            double totalMinutes = timeVal >= 60 ? timeVal / 60 : timeVal;
+
+            if (totalMinutes < 3) return "bi bi-rocket-takeoff-fill text-yellow-400"; // Bullet (< 3m) -> Rocket
+            if (totalMinutes < 10) return "bi bi-lightning-fill text-amber-500"; // Blitz (3-9m) -> Lightning
+            return "bi bi-stopwatch-fill text-emerald-400"; // Rapid (>= 10m) -> Stopwatch
+        }
+        return "bi bi-hourglass text-gray-400";
+    }
+
+    private string GetFormattedTime(string tc)
+    {
+        if (string.IsNullOrEmpty(tc)) return "-";
+        
+        var parts = tc.Split('+');
+        if (parts.Length > 0 && double.TryParse(parts[0], out double timeVal))
+        {
+            double totalMinutes = timeVal >= 60 ? timeVal / 60 : timeVal;
+            string increment = parts.Length > 1 ? parts[1] : "0";
+
+            if (increment == "0") return $"{totalMinutes}";
+            return $"{totalMinutes}|{increment}";
+        }
+        return tc.Replace("+", "|");
     }
 }
 

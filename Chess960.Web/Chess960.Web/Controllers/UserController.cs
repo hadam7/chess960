@@ -143,6 +143,7 @@ public class UserController : ControllerBase
                 g.BlackUserName,
                 g.Result,
                 g.EndReason,
+                g.TimeControl,
                 g.DatePlayed
             })
             .ToListAsync();
@@ -154,6 +155,7 @@ public class UserController : ControllerBase
             // Determine result relative to the user
             Result = DetermineResult(g.Result, g.WhiteUserId == userId), 
             EndReason = g.EndReason,
+            TimeControl = g.TimeControl,
             DatePlayed = g.DatePlayed
         }).ToList();
 

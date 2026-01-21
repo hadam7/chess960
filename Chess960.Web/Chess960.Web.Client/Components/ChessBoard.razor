@@ -1,10 +1,11 @@
 @using Chess960.Web.Client.Services
 @inject ChessGameService GameService
 @inject PieceThemeService PieceThemeService
-@inject AudioService AudioService
+@inject AudioService Audio
 @implements IDisposable
 
 <div class="flex flex-col items-center gap-4">
+@* (rest of the file stays same) *@
     <div class="w-full aspect-square bg-white/5 rounded-none shadow-2xl overflow-hidden border-8 border-white/10 relative backdrop-blur-sm">
         <div class="grid grid-cols-8 grid-rows-8 h-full w-full">
             @for (int row = 0; row < 8; row++)
@@ -120,7 +121,10 @@
     {
         if (firstRender)
         {
-            await AudioService.InitializeAsync();
+            if (string.IsNullOrEmpty(OverlayFen))
+            {
+                await Audio.InitializeAsync();
+            }
         }
     }
 
@@ -146,15 +150,15 @@
         
         if (GameService.IsMate)
         {
-             _ = AudioService.PlayGameEnd();
+             if (string.IsNullOrEmpty(OverlayFen)) _ = Audio.PlayGameEnd();
         }
         else if (GameService.IsCheck)
         {
-            _ = AudioService.PlayCheck();
+            if (string.IsNullOrEmpty(OverlayFen)) _ = Audio.PlayCheck();
         }
         else
         {
-            _ = AudioService.PlayMove();
+            if (string.IsNullOrEmpty(OverlayFen)) _ = Audio.PlayMove();
         }
         
         InvokeAsync(StateHasChanged);

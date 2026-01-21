@@ -106,8 +106,11 @@ public class GameManager
     public GameSession CreateGame(string whiteConnectionId, string whiteUserId, string blackConnectionId, string blackUserId, string timeControlIn)
     {
         var gameId = GenerateGameId();
-        var game = GameFactory.Create();
-        game.NewGame();
+        
+        // Generate Chess960 Position
+        var fen = Chess960.Web.Client.Services.Chess960Generator.GenerateStartingFen();
+        var game = GameFactory.Create(fen);
+        // game.NewGame(); // Standard only
 
         // Parse Time Control (Format: "minutes+increment" e.g., "3+2")
         var parts = timeControlIn.Split('+');
@@ -140,6 +143,22 @@ public class GameManager
     {
         _games.TryGetValue(gameId, out var session);
         return session;
+    }
+
+    public GameSession? GetActiveGameForUser(string userId)
+    {
+        // Naive search - if performance becomes issue, we need a refined valid-connection dictionary or secondary index
+        foreach (var session in _games.Values)
+        {
+            if (session.Result == GameResult.Active)
+            {
+                if (session.WhiteUserId == userId || session.BlackUserId == userId)
+                {
+                    return session;
+                }
+            }
+        }
+        return null;
     }
 
     public bool JoinGame(string gameId, string playerConnectionId, string userId)

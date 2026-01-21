@@ -15,6 +15,7 @@ public class GameHistory
 
     public string Result { get; set; } = string.Empty; // e.g. "WhiteWon", "Draw"
     public string EndReason { get; set; } = string.Empty; // e.g. "Checkmate", "Resignation"
+    public string TimeControl { get; set; } = string.Empty; // e.g. "600+0", "180+2"
 
     public string MovesPgn { get; set; } = string.Empty; // Store moves
     public string Fen { get; set; } = string.Empty; // Final position

@@ -493,11 +493,40 @@
                      
                      <!-- Time Control Selector for Friends -->
                      <div>
-                        <div class="text-xs text-theme-muted font-bold uppercase tracking-wider mb-2">Time Control</div>
-                        <div class="grid grid-cols-3 gap-2">
-                             <button @onclick="@(() => selectedTimeControl = "3+2")" class="@GetTimeClass("3+2") text-[10px]">3|2</button>
-                             <button @onclick="@(() => selectedTimeControl = "5+0")" class="@GetTimeClass("5+0") text-[10px]">5 m</button>
-                             <button @onclick="@(() => selectedTimeControl = "10+0")" class="@GetTimeClass("10+0") text-[10px]">10 m</button>
+                        <div class="text-xs text-theme-muted font-bold uppercase tracking-wider mb-2 flex items-center gap-2">Time Control</div>
+                        
+                         <!-- Section: Rapid -->
+                        <div class="text-left mb-2">
+                            <div class="text-[10px] text-theme-muted/70 font-bold uppercase tracking-wider mb-1 flex items-center gap-2">
+                                    <span class="bi bi-stopwatch-fill"></span> Rapid
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button @onclick="@(() => selectedTimeControl = "10+0")" class="@GetTimeClass("10+0") text-[10px]">10 m</button>
+                                <button @onclick="@(() => selectedTimeControl = "15+10")" class="@GetTimeClass("15+10") text-[10px]">15|10</button>
+                                <button @onclick="@(() => selectedTimeControl = "30+0")" class="@GetTimeClass("30+0") text-[10px]">30 m</button>
+                            </div>
+                        </div>
+                        <!-- Section: Blitz -->
+                        <div class="text-left mb-2">
+                            <div class="text-[10px] text-theme-muted/70 font-bold uppercase tracking-wider mb-1 flex items-center gap-2">
+                                    <span class="bi bi-lightning-fill"></span> Blitz
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button @onclick="@(() => selectedTimeControl = "3+0")" class="@GetTimeClass("3+0") text-[10px]">3 m</button>
+                                <button @onclick="@(() => selectedTimeControl = "3+2")" class="@GetTimeClass("3+2") text-[10px]">3|2</button>
+                                <button @onclick="@(() => selectedTimeControl = "5+0")" class="@GetTimeClass("5+0") text-[10px]">5 m</button>
+                            </div>
+                        </div>
+                         <!-- Section: Bullet -->
+                        <div class="text-left">
+                            <div class="text-[10px] text-theme-muted/70 font-bold uppercase tracking-wider mb-1 flex items-center gap-2">
+                                    <span class="bi bi-rocket-takeoff-fill"></span> Bullet
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button @onclick="@(() => selectedTimeControl = "1+0")" class="@GetTimeClass("1+0") text-[10px]">1 m</button>
+                                <button @onclick="@(() => selectedTimeControl = "1+1")" class="@GetTimeClass("1+1") text-[10px]">1|1</button>
+                                <button @onclick="@(() => selectedTimeControl = "2+1")" class="@GetTimeClass("2+1") text-[10px]">2|1</button>
+                            </div>
                         </div>
                      </div>
                  </div>
@@ -813,6 +842,16 @@
             {
                await Multiplayer.JoinGame(GameId);
             }
+            else if (string.IsNullOrEmpty(GameId))
+            {
+                 // Try to reconnect to any active game
+                 var activeGame = await Multiplayer.GetActiveGameAsync();
+                 if (activeGame != null)
+                 {
+                     Console.WriteLine($"[PlayOnline] Reconnected to active game: {activeGame.GameId}");
+                     HandleGameStarted(activeGame);
+                 }
+            }
             
             // Friends loading removed
         }
@@ -992,8 +1031,12 @@
             WhiteTimeMs = whiteTime;
             BlackTimeMs = blackTime;
             
+             // Convert to SAN using Previous FEN
+             string previousFen = fenHistory.Count > 0 ? fenHistory.Last() : GameService.GetFen();
+             string sanMove = GameService.GetSanForMove(previousFen, moveString);
+
              // Add move to history
-             moveList.Add(moveString); 
+             moveList.Add(sanMove); 
 
              // Critical Fix: Sync state perfectly with server
              Console.WriteLine("[Client] Syncing GameService from FEN...");

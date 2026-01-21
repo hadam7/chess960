@@ -2,6 +2,7 @@
 @using Chess960.Web.Data
 @using Chess960.Web.Services
 @using Chess960.Web.Client.Components
+@using Chess960.Web.Client.Services
 @using Rudzoft.ChessLib
 @using Rudzoft.ChessLib.Factories
 @using Rudzoft.ChessLib.Types
@@ -9,30 +10,23 @@
 @using Rudzoft.ChessLib.MoveGeneration
 @using Microsoft.AspNetCore.Components.Web
 @inject GameHistoryService HistoryService
-@* Static SSR requires no rendermode (or defaults to static) *@
+@rendermode InteractiveServer
 
 <PageTitle>Game Replay</PageTitle>
 
-<div class="max-w-6xl mx-auto py-10 px-4 focus:outline-none">
-    <a href="/profile" class="text-theme-muted hover:text-white transition-colors mb-6 inline-flex items-center gap-2">
+<div class="max-w-6xl mx-auto py-4 px-2 md:py-8 md:px-4 focus:outline-none">
+    <a href="/profile" class="text-theme-muted hover:text-white transition-colors mb-4 inline-flex items-center gap-2">
         <span class="bi bi-arrow-left"></span> Back to Profile
     </a>
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-8">
-             <div class="bg-red-900/50 border border-red-500 text-white p-6 rounded-lg max-w-2xl shadow-2xl">
-                <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
-                    <span class="bi bi-exclamation-triangle-fill text-yellow-500"></span> 
-                    Replay Error
-                </h2>
-                <pre class="whitespace-pre-wrap text-xs font-mono bg-black/50 p-4 rounded border border-red-500/30 overflow-auto max-h-[60vh]">
-                    @errorMessage
-                </pre>
-                <div class="mt-4 flex justify-end">
-                     <a href="/" class="px-4 py-2 bg-white text-black font-bold rounded hover:scale-105 transition-transform">Go Home</a>
-                </div>
-             </div>
+        <div class="bg-red-900/50 border border-red-500 text-white p-4 mb-4 rounded-lg shadow-2xl">
+            <h2 class="text-xl font-bold flex items-center gap-2">
+                <span class="bi bi-exclamation-triangle-fill text-yellow-500"></span> 
+                Debug Info
+            </h2>
+            <p class="font-mono text-xs mt-2">@errorMessage</p>
         </div>
     }
 
@@ -44,7 +38,7 @@
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-theme-accent"></div>
             </div>
         }
-        else
+        else if (string.IsNullOrEmpty(errorMessage))
         {
              <div class="text-center py-16 text-white">
                 <span class="bi bi-exclamation-circle text-4xl mb-4 text-red-500"></span>
@@ -54,13 +48,23 @@
     }
     else
     {
-        <div class="glass-panel overflow-hidden flex flex-col md:flex-row h-[80vh]">
+        <div class="glass-panel flex flex-col md:flex-row h-auto overflow-visible shadow-2xl">
              <!-- Board Area -->
-            <div class="flex-1 bg-black/40 flex flex-col items-center justify-center p-4 gap-4" 
+            <div class="flex-1 bg-black/40 flex flex-col items-center p-2 md:p-4" 
                  id="replay-board-container" 
                  data-fen="@CurrentFen">
                  
-                 <div class="aspect-square w-full max-w-[70vh] shadow-xl relative">
+                 <div class="flex-1"></div>
+
+                 @if (replaySteps.Count == 0)
+                 {
+                     <div class="bg-yellow-500/20 text-yellow-200 border border-yellow-500/50 p-3 rounded-lg flex items-center gap-2 mb-4">
+                         <span class="bi bi-exclamation-triangle-fill"></span>
+                         <span>No moves found in this game replay.</span>
+                     </div>
+                 }
+                 
+                 <div class="aspect-square w-full max-w-[85vw] md:max-w-[55vh] shadow-xl relative border-4 border-white/10 rounded-lg overflow-visible">
                      <ChessBoard OverlayFen="@CurrentFen" IsWhiteSide="@true" />
                      
                      <!-- Analysis Overlay (Arrows) -->
@@ -68,7 +72,7 @@
                  </div>
                  
                  <!-- Controls (URL Driven) -->
-                 <div class="flex items-center gap-4 bg-[#1a1a1a] p-3 rounded-full border border-white/10 shadow-lg relative">
+                 <div class="mt-8 flex items-center gap-4 bg-[#1a1a1a] p-3 rounded-full border border-white/10 shadow-lg relative">
                      
                      <!-- Eval Display -->
                      <div id="eval-display" class="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap"></div>
@@ -91,6 +95,8 @@
                          <span class="bi bi-skip-end-fill text-xl"></span>
                      </a>
                  </div>
+
+                 <div class="flex-1"></div>
             </div>
 
             <!-- Sidebar -->
@@ -144,20 +150,20 @@
 
                             <div class="py-2 text-center text-white/30 font-mono text-xs bg-[#1a1a1a]/50 border-b border-white/5">@moveNum.</div>
                             
-                            <!-- White Move -->
-                            <a href="@GetLink(whiteStepIndex + 1)" class="py-2 pl-4 block hover:bg-white/5 transition-colors border-b border-white/5 @(isWhiteActive ? "bg-theme-accent/20 text-theme-accent font-bold" : "text-white/70") decoration-transparent">
-                                @replaySteps[whiteStepIndex].SanMove
-                            </a>
+                             <!-- White Move -->
+                             <a href="@GetLink(whiteStepIndex + 1)" class="py-2 pl-4 block hover:bg-white/5 transition-colors border-b border-white/5 @(isWhiteActive ? "bg-theme-accent/20 text-theme-accent font-bold" : "text-white/70") decoration-transparent">
+                                 @replaySteps[whiteStepIndex].SanMove
+                             </a>
 
-                            <!-- Black Move -->
-                            <div class="border-b border-white/5">
-                                @if (blackStepIndex < replaySteps.Count)
-                                {
-                                    <a href="@GetLink(blackStepIndex + 1)" class="py-2 pl-4 block hover:bg-white/5 transition-colors @(isBlackActive ? "bg-theme-accent/20 text-theme-accent font-bold" : "text-white/70") decoration-transparent">
-                                        @replaySteps[blackStepIndex].SanMove
-                                    </a>
-                                }
-                            </div>
+                             <!-- Black Move -->
+                             <div class="border-b border-white/5">
+                                 @if (blackStepIndex < replaySteps.Count)
+                                 {
+                                     <a href="@GetLink(blackStepIndex + 1)" class="py-2 pl-4 block hover:bg-white/5 transition-colors @(isBlackActive ? "bg-theme-accent/20 text-theme-accent font-bold" : "text-white/70") decoration-transparent">
+                                         @replaySteps[blackStepIndex].SanMove
+                                     </a>
+                                 }
+                             </div>
                         }
                     </div>
                 </div>
@@ -167,6 +173,8 @@
 </div>
 
 <script type="module" src="/js/game-analysis.js"></script>
+
+@inject IJSRuntime JSRuntime
 
 @code {
     [Parameter] public Guid GameId { get; set; }
@@ -179,10 +187,12 @@
     
     // Replay Logic
     private List<ReplayStep> replaySteps = new();
-    private int currentMoveIndex = 0; // 0 = Start Position, 1 = After 1st move...
+    private int currentMoveIndex = 0; 
     private string InitialFen = "";
 
     private string CurrentFen => currentMoveIndex == 0 ? InitialFen : (currentMoveIndex <= replaySteps.Count ? replaySteps[currentMoveIndex - 1].FenAfter : InitialFen);
+    
+    private IJSObjectReference? _analysisModule;
 
     private class ReplayStep
     {
@@ -203,7 +213,6 @@
             {
                 ParseGame(game.MovesPgn);
             }
-            // errorMessage = "DIAGNOSTIC MODE: Game Loaded from DB? " + (game != null ? "YES" : "NO");
         }
         catch (Exception ex)
         {
@@ -213,6 +222,23 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+             // Initialize Stockfish Analysis
+             try
+             {
+                 _analysisModule = await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/js/game-analysis.js");
+                 await _analysisModule.InvokeVoidAsync("initAnalysis");
+             }
+             catch (Exception ex)
+             {
+                 Console.WriteLine($"[GameReplay] Analysis Init Failed: {ex.Message}");
+             }
         }
     }
     
@@ -231,7 +257,6 @@
 
     private string GetLink(int stepIndex)
     {
-        // Construct clean URL
         return $"/replay/{GameId}?step={stepIndex}";
     }
 

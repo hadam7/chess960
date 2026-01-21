@@ -18,27 +18,46 @@ export function initAnalysis() {
 
     // Initialize Stockfish
     if (!stockfish) {
-        stockfish = new Worker('/lib/stockfish/stockfish.js');
-        stockfish.postMessage('uci');
-        stockfish.postMessage('setoption name Hash value 32');
-        stockfish.postMessage('setoption name Threads value 2');
-        stockfish.postMessage('isready');
+        console.log("[Analysis] Creating Stockfish Worker...");
+        try {
+            stockfish = new Worker('/lib/stockfish/stockfish.js');
+            stockfish.onerror = (err) => console.error("[Analysis] Worker Error:", err);
 
-        stockfish.onmessage = (e) => {
-            const msg = e.data;
+            stockfish.postMessage('uci');
+            stockfish.postMessage('setoption name Hash value 32');
+            stockfish.postMessage('isready');
 
-            // Parse Info
-            if (msg.startsWith('info depth') && msg.includes('score')) {
-                parseInfo(msg);
-            }
-        };
+            stockfish.onmessage = (e) => {
+                const msg = e.data;
+                // Parse Info
+                if (msg.startsWith('info depth') && msg.includes('score')) {
+                    parseInfo(msg);
+                }
+                if (msg === 'readyok') {
+                    console.log("[Analysis] Engine Ready!");
+                    // Re-trigger analysis once ready if we have a FEN
+                    const current = container.getAttribute('data-fen');
+                    if (current) analyze(current);
+                }
+            };
+        } catch (e) {
+            console.error("[Analysis] Failed to create Worker:", e);
+        }
     }
 
-    // Observe changes to 'data-fen'
-    const observer = new MutationObserver((mutations) => {
+    // Initial analysis
+    const initialFen = container.getAttribute('data-fen');
+    console.log("[Analysis] Initial FEN:", initialFen);
+    if (initialFen) analyze(initialFen);
+
+    // Observe changes to 'data-fen' (re-init observer if needed)
+    if (window._analysisObserver) window._analysisObserver.disconnect();
+
+    window._analysisObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.type === 'attributes' && mutation.attributeName === 'data-fen') {
                 const newFen = container.getAttribute('data-fen');
+                console.log("[Analysis] FEN changed to:", newFen);
                 if (newFen && newFen !== currentFen) {
                     analyze(newFen);
                 }
@@ -46,26 +65,22 @@ export function initAnalysis() {
         });
     });
 
-    observer.observe(container, { attributes: true });
-
-    // Initial analysis
-    const initialFen = container.getAttribute('data-fen');
-    if (initialFen) analyze(initialFen);
+    window._analysisObserver.observe(container, { attributes: true });
 }
 
 function analyze(fen) {
     currentFen = fen;
-    console.log("[Analysis] Analyzing FEN:", fen);
+    // console.log("[Analysis] Analyzing FEN:", fen);
     clearArrow();
 
     // Update status
-    document.getElementById('eval-display').innerHTML = '<span class="animate-pulse">⏳</span>';
+    const display = document.getElementById('eval-display');
+    if (display) display.innerHTML = '<span class="animate-pulse">⏳</span>';
 
     // Stop previous
     stockfish.postMessage('stop');
-    // stockfish.postMessage('ucinewgame'); 
     stockfish.postMessage(`position fen ${fen}`);
-    stockfish.postMessage('go depth 22');
+    stockfish.postMessage('go depth 20'); // Lower depth for faster response
 }
 
 function parseInfo(msg) {
@@ -159,11 +174,11 @@ function drawArrow(moveStr) {
         <svg viewBox="0 0 100 100" class="w-full h-full absolute top-0 left-0 pointer-events-none overflow-visible">
             <defs>
                 <marker id="arrowhead" markerWidth="4" markerHeight="4" refX="2" refY="2" orient="auto">
-                    <path d="M0,0 L4,2 L0,4 Z" fill="rgba(255, 255, 255, 0.7)" />
+                    <path d="M0,0 L4,2 L0,4 Z" fill="rgba(2, 233, 206, 0.8)" />
                 </marker>
             </defs>
             <line x1="${fromCoords.x}" y1="${fromCoords.y}" x2="${toCoords.x}" y2="${toCoords.y}" 
-                  stroke="rgba(255, 255, 255, 0.7)" stroke-width="2" marker-end="url(#arrowhead)" opacity="0.8" />
+                  stroke="rgba(2, 233, 206, 0.8)" stroke-width="2" marker-end="url(#arrowhead)" opacity="0.8" />
         </svg>
     `;
 
