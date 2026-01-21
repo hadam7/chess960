@@ -11,9 +11,9 @@
     <div class="flex flex-col md:flex-row justify-between items-center gap-6">
         <div>
             <h1 class="text-3xl font-display font-bold text-white">
-                Szia, <span class="text-transparent bg-clip-text bg-gradient-to-r from-theme-accent to-theme-glow">@username</span>! 👋
+                Hi, <span class="text-transparent bg-clip-text bg-gradient-to-r from-theme-accent to-theme-glow">@username</span>! 👋
             </h1>
-            <p class="text-theme-muted mt-2">Készen állsz egy újabb partira?</p>
+            <p class="text-theme-muted mt-2">Ready for another game?</p>
         </div>
         
         <!-- Stats Mini-Grid -->
@@ -23,7 +23,7 @@
                  <span class="text-2xl font-mono font-bold text-theme-accent">@eloRating</span>
              </div>
              <div class="px-6 py-3 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md flex flex-col items-center min-w-[100px]">
-                 <span class="text-xs font-bold text-theme-muted uppercase tracking-wider">Meccsek</span>
+                 <span class="text-xs font-bold text-theme-muted uppercase tracking-wider">Matches</span>
                  <span class="text-2xl font-mono font-bold text-white">@gamesPlayed</span>
              </div>
         </div>
@@ -37,8 +37,8 @@
             <div class="absolute right-0 top-0 h-32 w-32 -mr-8 -mt-8 rounded-full bg-white/5 blur-2xl transition-all group-hover:bg-white/10"></div>
             <span class="bi bi-robot text-4xl text-white mb-4 block relative z-10"></span>
             <div class="relative z-10">
-                <h3 class="text-xl font-bold text-white">Játék Bot ellen</h3>
-                <p class="text-sm text-theme-muted mt-1">Gyakorolj Stockfish ellen tét nélkül.</p>
+                <h3 class="text-xl font-bold text-white">Play vs Bot</h3>
+                <p class="text-sm text-theme-muted mt-1">Practice against Stockfish without stakes.</p>
             </div>
         </button>
 
@@ -48,8 +48,8 @@
             <div class="absolute right-0 top-0 h-32 w-32 -mr-8 -mt-8 rounded-full bg-theme-accent/10 blur-2xl transition-all group-hover:bg-theme-accent/20"></div>
             <span class="bi bi-globe text-4xl text-theme-accent mb-4 block relative z-10"></span>
             <div class="relative z-10">
-                <h3 class="text-xl font-bold text-white">Online Játék</h3>
-                <p class="text-sm text-theme-accent/60 mt-1">Keress ellenfelet és mássz fel a ranglétrán.</p>
+                <h3 class="text-xl font-bold text-white">Play Online</h3>
+                <p class="text-sm text-theme-accent/60 mt-1">Find an opponent and climb the ranks.</p>
             </div>
         </button>
 
@@ -59,8 +59,8 @@
             <div class="absolute right-0 top-0 h-32 w-32 -mr-8 -mt-8 rounded-full bg-theme-glow/10 blur-2xl transition-all group-hover:bg-theme-glow/20"></div>
             <span class="bi bi-people-fill text-4xl text-theme-glow mb-4 block relative z-10"></span>
             <div class="relative z-10">
-                <h3 class="text-xl font-bold text-white">Barátok</h3>
-                <p class="text-sm text-theme-glow/60 mt-1">Kezeld a barátlistád és hívd ki őket.</p>
+                <h3 class="text-xl font-bold text-white">Friends</h3>
+                <p class="text-sm text-theme-glow/60 mt-1">Manage your friends list and challenge them.</p>
             </div>
         </button>
     </div>
@@ -70,7 +70,7 @@
     <!-- Active Friends Bar -->
     <div class="glass-panel p-6">
         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span class="bi bi-person-check-fill text-theme-accent"></span> Elérhető Barátok
+            <span class="bi bi-person-check-fill text-theme-accent"></span> Online Friends
         </h3>
         
         @if (isLoadingFriends)
@@ -104,7 +104,7 @@
         else
         {
             <div class="text-theme-muted text-sm italic">
-                Nincs elérhető barát jelenleg.
+                No friends online.
             </div>
         }
     </div>
@@ -112,7 +112,7 @@
     <!-- Recent Activity -->
     <div class="glass-panel p-6">
         <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span class="bi bi-clock-history text-theme-accent"></span> Legutóbbi Aktivitás
+            <span class="bi bi-clock-history text-theme-accent"></span> Recent Activity
         </h3>
 
         @if (recentGames == null)
@@ -128,9 +128,9 @@
                 <table class="w-full text-left text-sm">
                     <thead>
                         <tr class="text-xs text-theme-muted uppercase border-b border-white/10">
-                            <th class="pb-3 pl-2">Ellenfél</th>
-                            <th class="pb-3 text-center">Eredmény</th>
-                            <th class="pb-3 text-right pr-2">Dátum</th>
+                            <th class="pb-3 pl-2">Opponent</th>
+                            <th class="pb-3 text-center">Result</th>
+                            <th class="pb-3 text-right pr-2">Date</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-white/5">
@@ -144,19 +144,19 @@
                                     @if(game.Result == "Won")
                                     {
                                         <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-500/20 text-green-400 text-xs font-bold border border-green-500/30">
-                                            <span class="bi bi-trophy-fill"></span> NYERTES
+                                            <span class="bi bi-trophy-fill"></span> WON
                                         </span>
                                     }
                                     else if(game.Result == "Lost")
                                     {
                                         <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/20 text-red-400 text-xs font-bold border border-red-500/30">
-                                            <span class="bi bi-x-circle-fill"></span> VESZTES
+                                            <span class="bi bi-x-circle-fill"></span> LOST
                                         </span>
                                     }
                                     else
                                     {
                                         <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-500/20 text-gray-400 text-xs font-bold border border-gray-500/30">
-                                            <span class="bi bi-circle-half"></span> DÖNTETLEN
+                                            <span class="bi bi-circle-half"></span> DRAW
                                         </span>
                                     }
                                 </td>
@@ -172,7 +172,7 @@
         else
         {
             <div class="text-theme-muted text-sm italic">
-                Még nincs lejátszott mérkőzésed.
+                No games played yet.
             </div>
         }
     </div>
@@ -182,7 +182,7 @@
 @using System.Net.Http.Headers
 
 @code {
-    private string username = "Játékos";
+    private string username = "Player";
     private int eloRating = 1200;
     private int gamesPlayed = 0;
 
@@ -212,7 +212,7 @@
             {
                 Console.WriteLine($"Error fetching user stats: {ex.Message}");
                 // Fallback to claims if API fails
-                 username = user.Identity.Name ?? "Játékos";
+                 username = user.Identity.Name ?? "Player";
             }
 
             // Load friends

@@ -78,7 +78,7 @@
              {
                  <div class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
                      <div class="w-12 h-12 border-4 border-theme-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-                     <span class="text-white font-bold tracking-widest text-xs uppercase animate-pulse">Motor Betöltése...</span>
+                     <span class="text-white font-bold tracking-widest text-xs uppercase animate-pulse">Loading Engine...</span>
                  </div>
              }
              else
@@ -147,11 +147,11 @@
                         <!-- Buttons -->
                         <div class="w-full space-y-2">
                             <button @onclick="StartNewGameSearch" class="w-full py-3 bg-white text-black font-black text-sm uppercase tracking-wider rounded-lg hover:scale-105 transition-transform shadow-lg active:scale-95">
-                                <span class="bi bi-controller mr-2"></span> Új Játék
+                                <span class="bi bi-controller mr-2"></span> Play Again
                             </button>
                             
                             <button @onclick="CloseGameOver" class="w-full py-2 bg-white/5 text-white/70 font-bold uppercase text-[10px] tracking-widest rounded-lg hover:bg-white/10 hover:text-white transition-colors">
-                                Elemzés
+                                Analyze
                             </button>
                         </div>
                     </div>
@@ -219,16 +219,16 @@
             {
                 <button class="@GetTabClass("game")" @onclick="@(() => SetActiveTab("game"))">
                     <span class="bi bi-lightning-fill text-lg mb-1"></span>
-                    <span class="text-xs font-bold uppercase tracking-wide">Játék</span>
+                    <span class="text-xs font-bold uppercase tracking-wide">Game</span>
                 </button>
             }
             <button class="@GetTabClass("new-game")" @onclick="@(() => SetActiveTab("new-game"))">
                 <span class="bi bi-plus-square-fill text-lg mb-1"></span>
-                <span class="text-xs font-bold uppercase tracking-wide">Új játszma</span>
+                <span class="text-xs font-bold uppercase tracking-wide">New Game</span>
             </button>
             <button class="@GetTabClass("friends")" @onclick="@(() => SetActiveTab("friends"))">
                 <span class="bi bi-person-hearts text-lg mb-1"></span>
-                <span class="text-xs font-bold uppercase tracking-wide">Játék Baráttal</span>
+                <span class="text-xs font-bold uppercase tracking-wide">Play Friend</span>
             </button>
 
             @if (!string.IsNullOrEmpty(GameId))
@@ -294,8 +294,8 @@
                     {
                         <div class="absolute bottom-full left-0 w-full bg-[#1a1a1a] border-t border-white/10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] p-4 flex items-center justify-between gap-4 animate-in slide-in-from-bottom-4 fade-in duration-300 z-30">
                             <div class="flex flex-col">
-                                <span class="font-bold text-white uppercase tracking-wider text-xs">Döntetlen?</span>
-                                <span class="text-[9px] text-white/50 uppercase tracking-widest">Az ellenfél ajánlata</span>
+                                <span class="font-bold text-white uppercase tracking-wider text-xs">Draw?</span>
+                                <span class="text-[9px] text-white/50 uppercase tracking-widest">Opponent offers</span>
                             </div>
                             <div class="flex items-center gap-2">
                                 <button @onclick="AcceptDraw" class="w-8 h-8 flex items-center justify-center bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500 hover:text-black transition-all" title="Elfogad">
@@ -319,15 +319,15 @@
                          <button @onclick="ResignGame" class="bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors rounded text-xs py-2 flex items-center justify-center gap-2">
                              @if (CanAbort)
                              {
-                                 <span class="bi bi-x-circle-fill text-red-400"></span> <span>Mégsem</span>
+                                 <span class="bi bi-x-circle-fill text-red-400"></span> <span>Abort</span>
                              }
                              else
                              {
-                                 <span class="bi bi-flag-fill"></span> <span>Feladás</span>
+                                 <span class="bi bi-flag-fill"></span> <span>Resign</span>
                              }
                          </button>
                           <button @onclick="OfferDraw" class="bg-white/5 hover:bg-white/10 text-theme-muted hover:text-white transition-colors rounded text-xs py-2 flex items-center justify-center gap-2">
-                             <span class="bi bi-circle-half"></span> Döntetlen
+                             <span class="bi bi-circle-half"></span> Offer Draw
                          </button>
                     </div>
                 </div>
@@ -339,26 +339,26 @@
                     <!-- ... (Existing New Game Content) ... -->
                     <div class="w-full mb-8 space-y-4">
                         <!-- ... (We keep the content but abbreviated here for brevity if it was large, but I will include it) ... -->
-                         <!-- Section: Rapid -->
+                        <!-- Section: Rapid -->
                         <div class="text-left">
                             <div class="text-xs text-theme-muted font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
-                                    <span class="bi bi-stopwatch-fill"></span> Normál (Rapid)
+                                    <span class="bi bi-stopwatch-fill"></span> Rapid
                             </div>
                             <div class="grid grid-cols-3 gap-2">
-                                <button @onclick="@(() => selectedTimeControl = "10+0")" class="@GetTimeClass("10+0")">10 p</button>
+                                <button @onclick="@(() => selectedTimeControl = "10+0")" class="@GetTimeClass("10+0")">10 m</button>
                                 <button @onclick="@(() => selectedTimeControl = "15+10")" class="@GetTimeClass("15+10")">15|10</button>
-                                <button @onclick="@(() => selectedTimeControl = "30+0")" class="@GetTimeClass("30+0")">30 p</button>
+                                <button @onclick="@(() => selectedTimeControl = "30+0")" class="@GetTimeClass("30+0")">30 m</button>
                             </div>
                         </div>
                         <!-- Section: Blitz -->
                         <div class="text-left">
                             <div class="text-xs text-theme-muted font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
-                                    <span class="bi bi-lightning-fill"></span> Villám (Blitz)
+                                    <span class="bi bi-lightning-fill"></span> Blitz
                             </div>
                             <div class="grid grid-cols-3 gap-2">
-                                <button @onclick="@(() => selectedTimeControl = "3+0")" class="@GetTimeClass("3+0")">3 p</button>
+                                <button @onclick="@(() => selectedTimeControl = "3+0")" class="@GetTimeClass("3+0")">3 m</button>
                                 <button @onclick="@(() => selectedTimeControl = "3+2")" class="@GetTimeClass("3+2")">3|2</button>
-                                <button @onclick="@(() => selectedTimeControl = "5+0")" class="@GetTimeClass("5+0")">5 p</button>
+                                <button @onclick="@(() => selectedTimeControl = "5+0")" class="@GetTimeClass("5+0")">5 m</button>
                             </div>
                         </div>
                          <!-- Section: Bullet -->
@@ -367,7 +367,7 @@
                                     <span class="bi bi-rocket-takeoff-fill"></span> Bullet
                             </div>
                             <div class="grid grid-cols-3 gap-2">
-                                <button @onclick="@(() => selectedTimeControl = "1+0")" class="@GetTimeClass("1+0")">1 p</button>
+                                <button @onclick="@(() => selectedTimeControl = "1+0")" class="@GetTimeClass("1+0")">1 m</button>
                                 <button @onclick="@(() => selectedTimeControl = "1+1")" class="@GetTimeClass("1+1")">1|1</button>
                                 <button @onclick="@(() => selectedTimeControl = "2+1")" class="@GetTimeClass("2+1")">2|1</button>
                             </div>
@@ -380,7 +380,7 @@
                     <div class="text-left mt-6 mb-4">
                          <div class="flex items-center justify-between mb-2">
                             <div class="text-xs text-theme-muted font-bold uppercase tracking-wider flex items-center gap-2">
-                                <span class="bi bi-sliders"></span> Ellenfelek (Rating)
+                                <span class="bi bi-sliders"></span> Opponents (Rating)
                             </div>
                             <span class="text-xs font-bold text-theme-accent font-mono">+/- @ratingRange</span>
                         </div>
@@ -395,20 +395,20 @@
                     {
                          <div class="w-full py-8 bg-white/5 rounded-xl flex flex-col items-center justify-center animate-pulse mb-6 border border-white/10">
                             <div class="w-12 h-12 border-4 border-theme-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-                            <div class="text-theme-accent font-bold text-lg mb-2 tracking-widest uppercase">Keresés...</div>
-                            <button @onclick="CancelSearch" class="text-white/40 hover:text-white text-xs uppercase tracking-widest font-bold mt-2 hover:underline">Mégse</button>
+                            <div class="text-theme-accent font-bold text-lg mb-2 tracking-widest uppercase">Searching...</div>
+                            <button @onclick="CancelSearch" class="text-white/40 hover:text-white text-xs uppercase tracking-widest font-bold mt-2 hover:underline">Cancel</button>
                         </div>
                     }
                     else if (string.IsNullOrEmpty(GameId))
                     {
                           <button @onclick="FindMatch" class="w-full btn-pill text-xl py-5 shadow-[0_0_30px_rgba(var(--color-accent),0.3)] hover:shadow-[0_0_50px_rgba(var(--color-accent),0.5)] mb-6 flex items-center justify-center gap-3 group">
-                            <span>Játék</span>
+                            <span>Play</span>
                             <span class="bi bi-play-fill text-3xl group-hover:translate-x-1 transition-transform"></span>
                         </button>
                     }
                     else 
                     {
-                        <div class="text-green-400 font-bold mb-4">Játék Folyamatban!</div>
+                        <div class="text-green-400 font-bold mb-4">Game in Progress!</div>
                     }
                 </div>
             }
@@ -418,12 +418,12 @@
                      <!-- Link Generation Section -->
                      <div class="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
                          <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-2">
-                             <span class="bi bi-link-45deg text-theme-accent"></span> Meghívó Link
+                             <span class="bi bi-link-45deg text-theme-accent"></span> Invite Link
                          </h3>
-                         <div class="text-xs text-theme-muted mb-4">Küldd el ezt a linket bárkinek!</div>
+                         <div class="text-xs text-theme-muted mb-4">Send this link to anyone!</div>
                          
                          <button @onclick="GenerateInviteLink" class="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors mb-2 uppercase tracking-wider text-xs flex items-center justify-center gap-2">
-                             <span class="bi bi-magic"></span> Link Létrehozása
+                             <span class="bi bi-magic"></span> Create Link
                          </button>
 
                          @if (!string.IsNullOrEmpty(inviteLink))
@@ -441,9 +441,9 @@
                      <div>
                          <div class="flex items-center justify-between mb-3">
                              <h3 class="text-xs font-bold text-theme-muted uppercase tracking-widest flex items-center gap-2">
-                                 <span class="bi bi-people-fill"></span> Barátok Online
+                                 <span class="bi bi-people-fill"></span> Friends Online
                              </h3>
-                             <button @onclick="LoadFriends" class="text-xs text-theme-accent hover:underline" title="Frissítés">
+                             <button @onclick="LoadFriends" class="text-xs text-theme-accent hover:underline" title="Refresh">
                                  <span class="bi bi-arrow-clockwise"></span>
                              </button>
                          </div>
@@ -452,7 +452,7 @@
                          {
                              <div class="p-3 mb-2 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 text-xs">
                                  @friendListError
-                                 <button @onclick="LoadFriends" class="block mt-1 font-bold underline">Próbáld újra</button>
+                                 <button @onclick="LoadFriends" class="block mt-1 font-bold underline">Try Again</button>
                              </div>
                          }
                          
@@ -476,7 +476,7 @@
                                          
                                          <div class="opacity-0 group-hover:opacity-100 transition-opacity">
                                              <button @onclick="@(() => ChallengeFriend(friend.UserId))" class="bg-theme-accent text-black text-[10px] font-bold px-3 py-1.5 rounded-lg hover:scale-105 transition-transform shadow-md uppercase tracking-wider">
-                                                 Hívás
+                                                 Challenge
                                              </button>
                                          </div>
                                      </div>
@@ -486,18 +486,18 @@
                          else
                          {
                              <div class="text-theme-muted text-xs text-center py-4 border border-white/5 border-dashed rounded-xl opacity-50">
-                                 Nincsenek elérhető barátok.
+                                 No friends online.
                              </div>
                          }
                      </div>
                      
                      <!-- Time Control Selector for Friends -->
                      <div>
-                        <div class="text-xs text-theme-muted font-bold uppercase tracking-wider mb-2">Időbeosztás</div>
+                        <div class="text-xs text-theme-muted font-bold uppercase tracking-wider mb-2">Time Control</div>
                         <div class="grid grid-cols-3 gap-2">
                              <button @onclick="@(() => selectedTimeControl = "3+2")" class="@GetTimeClass("3+2") text-[10px]">3|2</button>
-                             <button @onclick="@(() => selectedTimeControl = "5+0")" class="@GetTimeClass("5+0") text-[10px]">5 p</button>
-                             <button @onclick="@(() => selectedTimeControl = "10+0")" class="@GetTimeClass("10+0") text-[10px]">10 p</button>
+                             <button @onclick="@(() => selectedTimeControl = "5+0")" class="@GetTimeClass("5+0") text-[10px]">5 m</button>
+                             <button @onclick="@(() => selectedTimeControl = "10+0")" class="@GetTimeClass("10+0") text-[10px]">10 m</button>
                         </div>
                      </div>
                  </div>
@@ -519,7 +519,7 @@
                 <span class="bi bi-circle-fill text-green-500 text-[6px]"></span>
                 <span>@OnlineUsersCount Online</span>
             </div>
-            <div>@GamesTodayCount Játszma ma</div>
+            <div>@GamesTodayCount Games Today</div>
         </div>
 
     </div>
@@ -669,7 +669,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"[PlayOnline] Error loading friends: {ex.Message}");
-            friendListError = $"Hiba a betöltéskor: {ex.Message}";
+            friendListError = $"Error loading friends: {ex.Message}";
         }
         StateHasChanged();
     }
@@ -866,7 +866,7 @@
     private void HandleChallengeFailed(string reason)
     {
         // Ideally show a proper toast, but for now we can reuse friendListError or just alert
-        friendListError = $"Hiba a híváskor: {reason}";
+        friendListError = $"Challenge failed: {reason}";
         InvokeAsync(StateHasChanged);
         
         // Auto-clear after 5 seconds
@@ -1083,15 +1083,15 @@
              {
                  IsDraw = false; 
                  IsAborted = true;
-                 GameOverMessage = "Megszakítva";
-                 GameOverSubtext = "A játékot megszakították";
+                 GameOverMessage = "Aborted";
+                 GameOverSubtext = "Game aborted";
              }
              else 
              {
                  IsDraw = true;
                  IsAborted = false;
-                 GameOverMessage = "Döntetlen";
-                 GameOverSubtext = ReasonToHungarian(reason);
+                 GameOverMessage = "Draw";
+                 GameOverSubtext = ReasonToEnglish(reason);
              }
          }
          else
@@ -1100,28 +1100,28 @@
              if (winnerId == Multiplayer.UserId)
              {
                  IsVictory = true;
-                 GameOverMessage = "Győzelem!";
-                 GameOverSubtext = ReasonToHungarian(reason);
+                 GameOverMessage = "Victory!";
+                 GameOverSubtext = ReasonToEnglish(reason);
              }
              else
              {
                  IsVictory = false;
-                 GameOverMessage = "Vereség";
-                 GameOverSubtext = ReasonToHungarian(reason);
+                 GameOverMessage = "Defeat";
+                 GameOverSubtext = ReasonToEnglish(reason);
              }
          }
          InvokeAsync(StateHasChanged);
     }
 
-    private string ReasonToHungarian(string reason)
+    private string ReasonToEnglish(string reason)
     {
         return reason switch
         {
-            "Checkmate" => "Sakk-matt",
-            "Resignation" => "Az ellenfél feladta" + (IsVictory ? "" : " (Te feladtad)"),
-            "Timeout" => "Lejárt az idő",
-            "Stalemate" => "Patt",
-            "DrawAgreed" => "Megegyezés szerint",
+            "Checkmate" => "Checkmate",
+            "Resignation" => "Opponent resigned" + (IsVictory ? "" : " (You resigned)"),
+            "Timeout" => "Time out",
+            "Stalemate" => "Stalemate",
+            "DrawAgreed" => "By Agreement",
             _ => reason
         };
     }

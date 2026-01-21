@@ -9,13 +9,13 @@
 @implements IAsyncDisposable
 @rendermode InteractiveWebAssembly
 
-<PageTitle>Barátok | Chess960</PageTitle>
+<PageTitle>Friends | Chess960</PageTitle>
 
 <div class="h-full px-4 md:px-8 py-6 w-full max-w-4xl mx-auto animate-soft-up">
     <div class="flex items-center justify-between mb-8">
         <div>
-            <h1 class="text-3xl font-display font-bold text-white tracking-tight">Barátok</h1>
-            <p class="text-theme-muted mt-1">Ismerősök kezelése és kihívása.</p>
+            <h1 class="text-3xl font-display font-bold text-white tracking-tight">Friends</h1>
+            <p class="text-theme-muted mt-1">Manage and challenge friends.</p>
         </div>
         <div class="w-12 h-12 rounded-xl bg-theme-accent/10 border border-theme-accent/30 flex items-center justify-center">
             <span class="bi bi-people-fill text-2xl text-theme-accent"></span>
@@ -25,12 +25,12 @@
     <!-- Friend Management (Search & Add) -->
     <div class="bg-black/20 backdrop-blur-md border border-white/5 rounded-2xl p-6 mb-8 shadow-lg">
         <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <span class="bi bi-person-plus-fill text-theme-accent"></span> Új Barát
+            <span class="bi bi-person-plus-fill text-theme-accent"></span> New Friend
         </h2>
         <div class="flex gap-3">
-            <input @bind="friendSearchQuery" @onkeyup="@(async e => { if (e.Key == "Enter") await AddFriend(); })" type="text" placeholder="Felhasználónév keresése..." class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-theme-accent transition-colors" />
+            <input @bind="friendSearchQuery" @onkeyup="@(async e => { if (e.Key == "Enter") await AddFriend(); })" type="text" placeholder="Search username..." class="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-theme-accent transition-colors" />
             <button @onclick="AddFriend" class="bg-theme-accent text-black font-bold uppercase tracking-wider px-6 py-3 rounded-xl hover:scale-105 transition-transform shadow-[0_0_15px_rgba(var(--color-accent),0.3)]">
-                <span class="bi bi-plus-lg mr-2"></span> Hozzáadás
+                <span class="bi bi-plus-lg mr-2"></span> Add
             </button>
         </div>
         @if (!string.IsNullOrEmpty(friendMessage))
@@ -46,7 +46,7 @@
         <!-- Requests Column -->
         <div>
              <h2 class="text-xs font-bold text-theme-muted uppercase tracking-widest mb-4 flex items-center gap-2">
-                 <span class="bi bi-inbox-fill"></span> Bejövő Kérések
+                 <span class="bi bi-inbox-fill"></span> Incoming Requests
              </h2>
              
              @if (pendingRequests.Any())
@@ -65,10 +65,10 @@
                                  </div>
                              </div>
                              <div class="flex gap-2">
-                                 <button @onclick="@(() => AcceptRequest(req.FriendshipId))" class="w-8 h-8 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-black transition-all flex items-center justify-center" title="Elfogad">
+                                 <button @onclick="@(() => AcceptRequest(req.FriendshipId))" class="w-8 h-8 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-black transition-all flex items-center justify-center" title="Accept">
                                      <span class="bi bi-check-lg text-lg"></span>
                                  </button>
-                                 <button @onclick="@(() => DeclineRequest(req.FriendshipId))" class="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-black transition-all flex items-center justify-center" title="Elutasít">
+                                 <button @onclick="@(() => DeclineRequest(req.FriendshipId))" class="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-black transition-all flex items-center justify-center" title="Decline">
                                      <span class="bi bi-x-lg"></span>
                                  </button>
                              </div>
@@ -80,7 +80,7 @@
              {
                  <div class="bg-white/[0.02] border border-white/5 rounded-xl p-8 text-center text-theme-muted opacity-50 border-dashed">
                      <span class="bi bi-inbox text-3xl block mb-2"></span>
-                     Nincsenek új kérések
+                     No new requests
                  </div>
              }
         </div>
@@ -88,7 +88,7 @@
         <!-- Friends List Column -->
         <div>
             <h2 class="text-xs font-bold text-theme-muted uppercase tracking-widest mb-4 flex items-center gap-2">
-                <span class="bi bi-people-fill"></span> Barátok Listája
+                <span class="bi bi-people-fill"></span> Friend List
             </h2>
 
             @if (friends.Any())
@@ -110,7 +110,7 @@
                              </div>
                              
                              <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                 <button @onclick="@(() => RemoveFriend(friend.FriendshipId))" class="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white text-xs font-bold p-1.5 rounded-lg hover:scale-105 transition-all shadow-md ml-1" title="Barát törlése">
+                                 <button @onclick="@(() => RemoveFriend(friend.FriendshipId))" class="bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white text-xs font-bold p-1.5 rounded-lg hover:scale-105 transition-all shadow-md ml-1" title="Remove Friend">
                                      <span class="bi bi-trash-fill"></span>
                                  </button>
                              </div>
@@ -122,7 +122,7 @@
             {
                  <div class="bg-white/[0.02] border border-white/5 rounded-xl p-8 text-center text-theme-muted opacity-50 border-dashed">
                      <span class="bi bi-emoji-frown text-3xl block mb-2"></span>
-                     Még nincsenek barátaid
+                     You have no friends yet
                  </div>
             }
         </div>
@@ -193,7 +193,7 @@
         var error = await FriendService.SendFriendRequestAsync(friendSearchQuery);
         if (error == null) // Success
         {
-            friendMessage = "Kérelem elküldve!";
+            friendMessage = "Request sent!";
             friendMessageSuccess = true;
             friendSearchQuery = "";
         }

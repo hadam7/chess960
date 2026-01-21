@@ -17,11 +17,11 @@
                 <div>
                     <h4 class="text-white font-bold text-sm uppercase tracking-wide flex items-center gap-2">
                         <span class="bi bi-lightning-charge-fill text-theme-accent animate-pulse"></span>
-                        Kihívás Érkezett!
+                        Challenge Received!
                     </h4>
                     <p class="text-xs text-theme-muted mt-1">
-                        <span class="text-white font-bold">@challenge.RequesterName</span> kihívott egy 
-                        <span class="font-mono text-theme-accent">@challenge.TimeControl</span> meccsre.
+                        <span class="text-white font-bold">@challenge.RequesterName</span> challenged you to a 
+                        <span class="font-mono text-theme-accent">@challenge.TimeControl</span> match.
                     </p>
                 </div>
                 <button @onclick="@(() => DismissChallenge(challenge))" class="text-white/30 hover:text-white transition-colors">
@@ -31,10 +31,10 @@
             
             <div class="flex gap-2 mt-2">
                 <button @onclick="@(() => AcceptChallenge(challenge))" class="flex-1 bg-theme-accent text-black text-xs font-bold py-2 rounded hover:scale-105 transition-transform shadow-lg uppercase tracking-wider">
-                    Elfogad
+                    Accept
                 </button>
                 <button @onclick="@(() => DismissChallenge(challenge))" class="flex-1 bg-white/10 text-white text-xs font-bold py-2 rounded hover:bg-white/20 transition-colors uppercase tracking-wider">
-                    Elutasít
+                    Decline
                 </button>
             </div>
         </div>
