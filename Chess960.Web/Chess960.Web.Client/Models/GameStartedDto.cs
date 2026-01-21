@@ -12,4 +12,6 @@ public class GameStartedDto
     public int BlackRating { get; set; }
     public string? WhiteAvatar { get; set; }
     public string? BlackAvatar { get; set; }
+    public string WhiteName { get; set; } = "White";
+    public string BlackName { get; set; } = "Black";
 }

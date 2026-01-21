@@ -57,7 +57,7 @@
                          <div class="bg-white/5 border border-white/5 p-4 rounded-xl flex items-center justify-between group hover:border-theme-accent/30 transition-colors">
                              <div class="flex items-center gap-3">
                                  <div class="w-10 h-10 rounded-full bg-theme-accent flex items-center justify-center text-black font-bold shadow-md">
-                                     @req.RequesterName[0].ToString().ToUpper()
+                                     @((!string.IsNullOrEmpty(req.RequesterName) ? req.RequesterName[0].ToString() : "?").ToUpper())
                                  </div>
                                  <div>
                                      <div class="text-white font-bold">@req.RequesterName</div>
@@ -99,7 +99,7 @@
                          <div class="bg-white/5 border border-white/5 p-4 rounded-xl flex items-center justify-between group hover:border-theme-accent/30 transition-colors">
                              <div class="flex items-center gap-3">
                                  <div class="w-10 h-10 rounded-full bg-theme-accent flex items-center justify-center text-black font-bold shadow-md">
-                                     @friend.UserName[0].ToString().ToUpper()
+                                     @((!string.IsNullOrEmpty(friend.UserName) ? friend.UserName[0].ToString() : "?").ToUpper())
                                  </div>
                                  <div>
                                      <div class="text-white font-bold">@friend.UserName</div>

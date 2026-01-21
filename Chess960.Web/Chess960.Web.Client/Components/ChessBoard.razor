@@ -141,6 +141,7 @@
 
     private void RefreshBoard()
     {
+        // Console.WriteLine("[ChessBoard] RefreshBoard called.");
         UpdateBoardCache();
         
         if (GameService.IsMate)
@@ -153,13 +154,10 @@
         }
         else
         {
-            // Only play move sound if game is NOT over (e.g. resignation shouldn't trigger move sound, but here we are usually triggering on move)
-            // But verify if state changed due to move or other event.
-            // For simple implementation, play move if not check/mate.
             _ = AudioService.PlayMove();
         }
         
-        StateHasChanged();
+        InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()

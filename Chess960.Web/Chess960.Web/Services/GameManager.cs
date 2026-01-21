@@ -9,49 +9,76 @@ namespace Chess960.Web.Services;
 public class GameManager
 {
     private readonly ConcurrentDictionary<string, GameSession> _games = new();
-    // Key: TimeControl (e.g., "3+2"), Value: Queue of waiting players
-    private readonly ConcurrentDictionary<string, ConcurrentQueue<(string ConnectionId, string UserId)>> _waitingQueues = new();
-    
-    // Key: UserId, Value: ConnectionId (Tracks online users)
-    private readonly ConcurrentDictionary<string, string> _userConnections = new();
+    // Key: TimeControl (e.g., "3+2"), Value: List of waiting players (Locked for access)
+    private readonly ConcurrentDictionary<string, List<MatchTicket>> _waitingLists = new();
 
-    public void RegisterUser(string userId, string connectionId)
+    public GameSession? FindMatch(string playerConnectionId, string userId, string timeControl, int userRating, int ratingRange)
     {
-        Console.WriteLine($"[GameManager] RegisterUser: {userId} -> {connectionId}");
-        _userConnections[userId] = connectionId;
-    }
+        var list = _waitingLists.GetOrAdd(timeControl, _ => new List<MatchTicket>());
 
-    public void UnregisterUser(string userId)
-    {
-        Console.WriteLine($"[GameManager] UnregisterUser: {userId}");
-        _userConnections.TryRemove(userId, out _);
-    }
-    
-    public string? GetConnectionId(string userId)
-    {
-        _userConnections.TryGetValue(userId, out var connId);
-        Console.WriteLine($"[GameManager] GetConnectionId for {userId} returns {connId ?? "NULL"}");
-        return connId;
-    }
-
-    public GameSession? FindMatch(string playerConnectionId, string userId, string timeControl)
-    {
-        var queue = _waitingQueues.GetOrAdd(timeControl, _ => new ConcurrentQueue<(string ConnectionId, string UserId)>());
-
-        if (queue.TryDequeue(out var opponent))
+        lock (list) 
         {
-            // Prevent matching with self if clicked twice quickly
-            if (opponent.UserId == userId)
+            // 1. Clean up offline/stale users first? Or check on match? Check on match for efficiency.
+
+            // 2. Iterate to find a match
+            for (int i = 0; i < list.Count; i++)
             {
-                queue.Enqueue(opponent);
-                return null;
+                var opponent = list[i];
+
+                // Skip self
+                if (opponent.UserId == userId) continue;
+
+                // Check Connection Validity
+                var currentOppConn = GetConnectionId(opponent.UserId);
+                if (string.IsNullOrEmpty(currentOppConn))
+                {
+                    // Remove stale entry
+                    list.RemoveAt(i);
+                    i--; // Adjust index
+                    continue;
+                }
+
+                // CHECK RATINGS (Mutual)
+                // My requirement: Abs(OpRating - MyRating) <= MyRange
+                // Op requirement: Abs(MyRating - OpRating) <= OpRange
+                int diff = Math.Abs(userRating - opponent.Rating);
+                
+                if (diff <= ratingRange && diff <= opponent.RatingRange)
+                {
+                    // Match Found!
+                    Console.WriteLine($"[GameManager] Elo Match: {userId}({userRating}) vs {opponent.UserId}({opponent.Rating}). Diff: {diff}");
+                    
+                    list.RemoveAt(i); // Remove opponent from queue
+
+                    // Create Game
+                    return CreateGame(currentOppConn, opponent.UserId, playerConnectionId, userId, timeControl);
+                }
             }
+
+            // 3. No match found -> Add self to list
+            // Remove any existing entry for self first (to update rating/range)
+            list.RemoveAll(x => x.UserId == userId);
             
-            return CreateGame(opponent.ConnectionId, opponent.UserId, playerConnectionId, userId, timeControl);
+            list.Add(new MatchTicket(playerConnectionId, userId, userRating, ratingRange));
+            Console.WriteLine($"[GameManager] Enqueued {userId} ({userRating} +/- {ratingRange}) for {timeControl}");
+            return null;
         }
-        
-        queue.Enqueue((playerConnectionId, userId));
-        return null;
+    }
+
+    private class MatchTicket
+    {
+        public string ConnectionId { get; }
+        public string UserId { get; }
+        public int Rating { get; }
+        public int RatingRange { get; }
+
+        public MatchTicket(string connectionId, string userId, int rating, int ratingRange)
+        {
+            ConnectionId = connectionId;
+            UserId = userId;
+            Rating = rating;
+            RatingRange = ratingRange;
+        }
     }
 
     public GameSession CreateGame(string whiteConnectionId, string whiteUserId, string blackConnectionId, string blackUserId, string timeControlIn)
@@ -120,11 +147,12 @@ public class GameManager
         return false;
     }
 
-    public bool MakeMove(string gameId, string moveString)
+    public MoveResult MakeMove(string gameId, string moveString)
     {
         if (_games.TryGetValue(gameId, out var session))
         {
-            if (session.Result != GameResult.Active) return false;
+            if (session.Result != GameResult.Active) 
+                return new MoveResult(false, "", 0, 0, session.Result, session.EndReason, session.WinnerUserId);
 
             try 
             {
@@ -148,7 +176,7 @@ public class GameManager
                         if (session.WhiteTimeRemainingMs < 0) 
                         {
                             EndGame(session, GameResult.BlackWon, GameEndReason.Timeout, session.BlackUserId);
-                            return false; 
+                            return new MoveResult(false, session.Game.Pos.FenNotation, 0, session.BlackTimeRemainingMs, session.Result, session.EndReason, session.WinnerUserId);
                         }
                         session.WhiteTimeRemainingMs += session.IncrementMs;
                     }
@@ -158,7 +186,7 @@ public class GameManager
                         if (session.BlackTimeRemainingMs < 0)
                         {
                             EndGame(session, GameResult.WhiteWon, GameEndReason.Timeout, session.WhiteUserId);
-                            return false;
+                            return new MoveResult(false, session.Game.Pos.FenNotation, session.WhiteTimeRemainingMs, 0, session.Result, session.EndReason, session.WinnerUserId);
                         }
                         session.BlackTimeRemainingMs += session.IncrementMs;
                     }
@@ -171,31 +199,28 @@ public class GameManager
                     // Check Game Over Conditions
                     if (session.Game.Pos.IsMate)
                     {
-                        var winnerId = isWhiteMove ? session.WhiteUserId : session.BlackUserId; // The one who moved mated the other
+                        var winnerId = isWhiteMove ? session.WhiteUserId : session.BlackUserId; 
                         var result = isWhiteMove ? GameResult.WhiteWon : GameResult.BlackWon;
                         EndGame(session, result, GameEndReason.Checkmate, winnerId);
                     }
                     else 
                     {
-                        // Check for Stalemate: Not in check, but no legal moves
-                        // We need to generate moves for the *next* side to move to see if they have any
                         var nextMoves = session.Game.Pos.GenerateMoves();
                         if (!nextMoves.Any() && !session.Game.Pos.InCheck)
                         {
                              EndGame(session, GameResult.Draw, GameEndReason.Stalemate, null);
                         }
                     }
-                    // TODO: Insufficient material, 50 move rule, etc.
 
-                    return true;
+                    return new MoveResult(true, session.Game.Pos.FenNotation, session.WhiteTimeRemainingMs, session.BlackTimeRemainingMs, session.Result, session.EndReason, session.WinnerUserId);
                 }
             }
             catch
             {
-                return false;
+                // Fallthrough to return false
             }
         }
-        return false;
+        return new MoveResult(false, "", 0, 0, GameResult.Active, GameEndReason.None, null);
     }
 
     public GameSession? Resign(string gameId, string userId)
@@ -297,6 +322,8 @@ public class GameManager
             .Select(s => s[random.Next(s.Length)]).ToArray());
     }
 }
+
+public record MoveResult(bool Success, string Fen, long WhiteTimeMs, long BlackTimeMs, GameResult Result, GameEndReason EndReason, string? WinnerId);
 
 public class GameSession
 {

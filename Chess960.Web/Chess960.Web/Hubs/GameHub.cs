@@ -59,10 +59,24 @@ public class GameHub : Hub
         await Clients.All.SendAsync("ServerStats", _onlineUsers, gamesToday);
     }
 
-    public async Task FindMatch(string userId, string timeControl)
+    public async Task FindMatch(string userId, string timeControl, int ratingRange)
     {
-        Console.WriteLine($"[Hub] FindMatch: User={userId}, Conn={Context.ConnectionId}");
-        var session = _gameManager.FindMatch(Context.ConnectionId, userId, timeControl);
+        Console.WriteLine($"[Hub] FindMatch: User={userId}, Conn={Context.ConnectionId}, Range={ratingRange}");
+        
+        // Fetch Current Rating for this Time Control
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null) return;
+
+        int currentRating = 1200; // Default
+        if (timeControl.Contains("1+") || timeControl.Contains("2+"))
+            currentRating = user.BulletRating;
+        else if (timeControl.Contains("3+") || timeControl.Contains("5+"))
+            currentRating = user.BlitzRating;
+        else
+            currentRating = user.RapidRating;
+
+        var session = _gameManager.FindMatch(Context.ConnectionId, userId, timeControl, currentRating, ratingRange);
+        
         if (session != null)
         {
             Console.WriteLine($"[Hub] Match Found! Game={session.GameId}. White={session.WhiteUserId}, Black={session.BlackUserId}");
@@ -90,12 +104,14 @@ public class GameHub : Hub
                 WhiteRating = whiteRating,
                 BlackRating = blackRating,
                 WhiteAvatar = whiteAvatar,
-                BlackAvatar = blackAvatar
+                BlackAvatar = blackAvatar,
+                WhiteName = whiteUser?.UserName ?? "White",
+                BlackName = blackUser?.UserName ?? "Black"
             });
         }
         else
         {
-             Console.WriteLine($"[Hub] Added to queue: {userId}");
+             Console.WriteLine($"[Hub] Added to queue: {userId} ({currentRating} +/- {ratingRange})");
             // Added to queue
             await Clients.Caller.SendAsync("WaitingForMatch");
         }
@@ -131,14 +147,56 @@ public class GameHub : Hub
                 WhiteRating = whiteRating,
                 BlackRating = blackRating,
                 WhiteAvatar = whiteAvatar,
-                BlackAvatar = blackAvatar
+                BlackAvatar = blackAvatar,
+                WhiteName = whiteUser?.UserName ?? "White",
+                BlackName = blackUser?.UserName ?? "Black"
             });
             return true;
         }
         return false;
     }
 
-    // ... MakeMove, Resign, Abort, OfferDraw, RespondDraw, SendChallenge unchanged ...
+    public async Task MakeMove(string gameId, string move, string userId)
+    {
+        Console.WriteLine($"[Hub] MakeMove: Game={gameId}, Move={move}. Caller={Context.UserIdentifier}, ParamUser={userId}");
+        
+        // Quick check if game exists
+        var session = _gameManager.GetGame(gameId);
+        if (session == null) 
+        {
+             Console.WriteLine("[Hub] Game not found.");
+             return;
+        }
+
+        Console.WriteLine($"[Hub] Game White={session.WhiteUserId}, Black={session.BlackUserId}");
+
+        // Security Check: Is it this user's turn?
+        // Fallback: Use ParamUser if Context.UserIdentifier is missing (for debugging/resilience)
+        var effectiveUser = !string.IsNullOrEmpty(Context.UserIdentifier) ? Context.UserIdentifier : userId;
+
+        if (session.WhiteUserId != effectiveUser && session.BlackUserId != effectiveUser)
+        {
+             Console.WriteLine($"[Hub] Auth Failed. Caller {effectiveUser} is not White or Black.");
+             return;
+        }
+
+        // Make Move
+        var moveResult = _gameManager.MakeMove(gameId, move);
+        Console.WriteLine($"[Hub] GameManager result: {moveResult.Success}. Fen: {moveResult.Fen}");
+        
+        if (moveResult.Success)
+        {
+            // Broadcast move to group
+            await Clients.Group(gameId).SendAsync("MoveMade", move, moveResult.Fen, moveResult.WhiteTimeMs, moveResult.BlackTimeMs);
+            Console.WriteLine("[Hub] Broadcast sent.");
+
+            // Check Game Over
+            if (moveResult.Result != GameResult.Active)
+            {
+               await HandleGameOver(session, moveResult);
+            }
+        }
+    }
 
     public async Task RespondToChallenge(string requesterId, string targetUserId, bool accept, string timeControl)
     {
@@ -193,7 +251,9 @@ public class GameHub : Hub
             WhiteRating = whiteRating,
             BlackRating = blackRating,
             WhiteAvatar = whiteAvatar,
-            BlackAvatar = blackAvatar
+            BlackAvatar = blackAvatar,
+            WhiteName = whiteUser?.UserName ?? "White",
+            BlackName = blackUser?.UserName ?? "Black"
         });
     }
 
@@ -215,14 +275,71 @@ public class GameHub : Hub
         await Clients.Group(gameId).SendAsync("ChatMessage", userId, message);
     }
 
-    private async Task HandleGameOver(GameSession session)
+    public async Task Resign(string gameId, string userId)
+    {
+         if (userId != Context.UserIdentifier) return;
+         
+         Console.WriteLine($"[Hub] Resign: Game={gameId}, User={userId}");
+         var session = _gameManager.Resign(gameId, userId);
+         if (session != null)
+         {
+             var result = new MoveResult(true, session.Game.Pos.FenNotation, session.WhiteTimeRemainingMs, session.BlackTimeRemainingMs, session.Result, session.EndReason, session.WinnerUserId);
+             await HandleGameOver(session, result);
+         }
+    }
+
+    public async Task Abort(string gameId, string userId)
+    {
+         if (userId != Context.UserIdentifier) return;
+
+         Console.WriteLine($"[Hub] Abort: Game={gameId}, User={userId}");
+         var session = _gameManager.Abort(gameId, userId);
+         if (session != null)
+         {
+             var result = new MoveResult(true, session.Game.Pos.FenNotation, session.WhiteTimeRemainingMs, session.BlackTimeRemainingMs, session.Result, session.EndReason, session.WinnerUserId);
+             await HandleGameOver(session, result);
+         }
+    }
+
+    public async Task OfferDraw(string gameId, string userId)
+    {
+         if (userId != Context.UserIdentifier) return;
+
+         Console.WriteLine($"[Hub] OfferDraw: Game={gameId}, User={userId}");
+         var success = _gameManager.OfferDraw(gameId, userId);
+         if (success)
+         {
+             await Clients.Group(gameId).SendAsync("DrawOffered", userId);
+         }
+    }
+
+    public async Task RespondDraw(string gameId, string userId, bool accept)
+    {
+         if (userId != Context.UserIdentifier) return;
+
+         Console.WriteLine($"[Hub] RespondDraw: Game={gameId}, User={userId}, Accept={accept}");
+         var session = _gameManager.RespondDraw(gameId, userId, accept);
+         
+         if (!accept)
+         {
+             await Clients.Group(gameId).SendAsync("DrawDeclined");
+         }
+         else if (session != null)
+         {
+             // Draw Accepted -> Game Over
+             var result = new MoveResult(true, session.Game.Pos.FenNotation, session.WhiteTimeRemainingMs, session.BlackTimeRemainingMs, session.Result, session.EndReason, session.WinnerUserId);
+             await HandleGameOver(session, result);
+         }
+    }
+
+    private async Task HandleGameOver(GameSession session, MoveResult moveResult)
     {
         // Calculate ELO changes (Skip if Aborted)
         int wNew = 0, bNew = 0, wDelta = 0, bDelta = 0;
 
-        if (session.Result != GameResult.Aborted)
+        if (moveResult.Result != GameResult.Aborted)
         {
-            var result = await _eloService.UpdateRatingsAsync(session.WhiteUserId, session.BlackUserId, session.Result, session.TimeControl);
+            var result = await _eloService.UpdateRatingsAsync(session.WhiteUserId, session.BlackUserId, moveResult.Result, session.TimeControl);
             wNew = result.whiteNew;
             bNew = result.blackNew; 
             wDelta = result.whiteDelta;
@@ -237,14 +354,14 @@ public class GameHub : Hub
         }
 
         // Save Game History
-        await _historyService.SaveGameAsync(session, session.Result, session.EndReason.ToString());
+        await _historyService.SaveGameAsync(session, moveResult.Result, moveResult.EndReason.ToString());
 
         await BroadcastStats(); // Update game count
 
         await Clients.Group(session.GameId).SendAsync("GameOver", 
-             session.WinnerUserId, 
-             session.EndReason.ToString(), 
-             session.Game.Pos.FenNotation,
+             moveResult.WinnerId, 
+             moveResult.EndReason.ToString(), 
+             moveResult.Fen,
              wNew, bNew, wDelta, bDelta);
     }
 }

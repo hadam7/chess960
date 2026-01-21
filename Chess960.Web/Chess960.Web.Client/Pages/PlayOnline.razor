@@ -374,6 +374,23 @@
                         </div>
                     </div>
 
+                    </div>
+                    
+                    <!-- Rating Range Slider -->
+                    <div class="text-left mt-6 mb-4">
+                         <div class="flex items-center justify-between mb-2">
+                            <div class="text-xs text-theme-muted font-bold uppercase tracking-wider flex items-center gap-2">
+                                <span class="bi bi-sliders"></span> Ellenfelek (Rating)
+                            </div>
+                            <span class="text-xs font-bold text-theme-accent font-mono">+/- @ratingRange</span>
+                        </div>
+                        <input type="range" min="50" max="1000" step="50" @bind="ratingRange" @bind:event="oninput" class="w-full appearance-none bg-white/10 h-1.5 rounded-full outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-theme-accent [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-theme-accent [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:cursor-pointer" />
+                        <div class="flex justify-between text-[9px] text-white/30 font-bold uppercase tracking-widest mt-1">
+                            <span>Strict (50)</span>
+                            <span>Wide (1000)</span>
+                        </div>
+                    </div>
+
                     @if (isSearching)
                     {
                          <div class="w-full py-8 bg-white/5 rounded-xl flex flex-col items-center justify-center animate-pulse mb-6 border border-white/10">
@@ -818,6 +835,8 @@
 
     // private void StartClockTimer() ... Removed
 
+    private int ratingRange = 400; // Default +/- 400
+
     private async Task FindMatch()
     {
         // Auth guard before searching
@@ -830,7 +849,7 @@
 
         if (isSearching) return;
         isSearching = true;
-        await Multiplayer.FindMatch(selectedTimeControl);
+        await Multiplayer.FindMatch(selectedTimeControl, ratingRange);
     }
 
     private void CancelSearch()
@@ -904,11 +923,11 @@
         // Determine Opponent Name
         if (Multiplayer.UserId == dto.WhiteId)
         {
-             OpponentName = dto.BlackId;
+             OpponentName = dto.BlackName;
         }
         else
         {
-             OpponentName = dto.WhiteId;
+             OpponentName = dto.WhiteName;
         }
         
         moveList.Clear(); // New game
@@ -957,44 +976,45 @@
 
     private void HandleRemoteMove(string moveString, string fen, long whiteTime, long blackTime)
     {
-        var from = moveString.Substring(0, 2);
-        var to = moveString.Substring(2, 2);
-        
-        // Handle promotion
-        if (moveString.Length > 4)
+        try
         {
-             // If local GameService supports promotion in 'to' string or as 3rd arg.
-             // Assuming MakeMove(from, to) handles "e8q" in 'to' or we need to pass it.
-             // Looking at ChessBoard.razor, MakeMove(from, to) is used.
-             // Let's assume we append it to 'to' if the service expects it that way, 
-             // OR usually Rudzoft expects 2 args where 'to' might need to handle it.
-             // Safest fix for now to avoid compilation error is:
-             // GameService.MakeMove(from, to + promotionChar)
-             to += moveString[4];
+            Console.WriteLine($"[Client] HandleRemoteMove Received: {moveString}, FEN: {fen}");
+            
+            var from = moveString.Substring(0, 2);
+            var to = moveString.Substring(2, 2);
+            
+            // Handle promotion
+            if (moveString.Length > 4)
+            {
+                 to += moveString[4];
+            }
+            
+            WhiteTimeMs = whiteTime;
+            BlackTimeMs = blackTime;
+            
+             // Add move to history
+             moveList.Add(moveString); 
+
+             // Critical Fix: Sync state perfectly with server
+             Console.WriteLine("[Client] Syncing GameService from FEN...");
+             GameService.StartGameFromFen(fen);
+             
+             // Update history with new state
+             fenHistory.Add(fen);
+             
+             // If we were at the end, stay at the end
+             if (currentViewIndex == fenHistory.Count - 2)
+             {
+                 currentViewIndex = fenHistory.Count - 1;
+             }
+
+             StateHasChanged();
+             Console.WriteLine("[Client] StateHasChanged called.");
         }
-        
-        WhiteTimeMs = whiteTime;
-        BlackTimeMs = blackTime;
-        
-
-         // Add move to history
-         moveList.Add(moveString); 
-
-         // Critical Fix: Sync state perfectly with server
-         // Instead of relying on local MakeMove (which might fail or differ), 
-         // we force the local board to the server's FEN.
-         GameService.StartGameFromFen(fen);
-         
-         // Update history with new state
-         fenHistory.Add(fen);
-         
-         // If we were at the end, stay at the end
-         if (currentViewIndex == fenHistory.Count - 2)
-         {
-             currentViewIndex = fenHistory.Count - 1;
-         }
-
-         StateHasChanged();
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Client] ERROR in HandleRemoteMove: {ex.Message} {ex.StackTrace}");
+        }
     }
     
     // Friend System Methods

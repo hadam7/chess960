@@ -202,7 +202,7 @@
     private void OnGameStateChanged()
     {
         // Check if it's Black's turn (Bot)
-        if (!GameService.Game.Pos.SideToMove.IsWhite && !GameService.IsMate && !GameService.IsStalemate)
+        if (GameService.Game != null && !GameService.Game.Pos.SideToMove.IsWhite && !GameService.IsMate && !GameService.IsStalemate)
         {
             isBotThinking = true;
             Log("Bot's turn. Thinking...");

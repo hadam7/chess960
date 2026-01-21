@@ -116,11 +116,11 @@ public class MultiplayerService : IAsyncDisposable
         await _hubConnection.StartAsync();
     }
 
-    public async Task FindMatch(string timeControl)
+    public async Task FindMatch(string timeControl, int ratingRange)
     {
         if (_hubConnection is not null)
         {
-            await _hubConnection.SendAsync("FindMatch", UserId, timeControl);
+            await _hubConnection.SendAsync("FindMatch", UserId, timeControl, ratingRange);
         }
     }
 

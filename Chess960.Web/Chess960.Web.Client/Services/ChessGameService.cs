@@ -144,6 +144,8 @@ public class ChessGameService
     private void UpdateGameState()
     {
         GameOverMessage = "";
+        if (Game == null) return;
+
         if (IsMate)
         {
             // If SideToMove is White, White is mated -> Black wins.
