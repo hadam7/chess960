@@ -104,4 +104,27 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 app.MapHub<Chess960.Web.Services.GameHub>("/gamehub");
 
+// Seed Default Users
+using (var scope = app.Services.CreateScope())
+{
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    
+    // Ensure DB is created
+    dbContext.Database.EnsureCreated();
+
+    string[] defaultUsers = ["player1@test.com", "player2@test.com"];
+    string defaultPassword = "Password123!";
+
+    foreach (var email in defaultUsers)
+    {
+        if (await userManager.FindByEmailAsync(email) == null)
+        {
+            var user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true };
+            await userManager.CreateAsync(user, defaultPassword);
+            Console.WriteLine($"[Seeder] Created default user: {email}");
+        }
+    }
+}
+
 app.Run();
